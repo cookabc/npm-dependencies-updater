@@ -4,6 +4,8 @@ import { VersionService } from './versionService';
 import { VersionResolver } from '../core/versionResolver';
 import { UpdateRisk, PackageVersionInfo, ParsedDependency } from '../types';
 import { StatusBarManager } from '../utils/statusBar';
+import { t } from '../utils/i18n';
+import { Logger } from '../utils/logger';
 
 export class NpmCodeLensProvider implements vscode.CodeLensProvider {
     private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
@@ -38,7 +40,6 @@ export class NpmCodeLensProvider implements vscode.CodeLensProvider {
             const range = new vscode.Range(startPos, endPos);
 
             const info = this.versionService.getCachedPackageInfo(dep.name);
-            
             if (info) {
                 const isUpdateAvailable = VersionResolver.isUpdateAvailable(dep.currentVersion, info.latestVersion);
                 if (isUpdateAvailable) {
@@ -48,22 +49,24 @@ export class NpmCodeLensProvider implements vscode.CodeLensProvider {
                         hasRiskyUpdates = true;
                     }
                 }
-                this.createCodeLenses(lenses, document, dep, info, range);
             } else {
                 allChecked = false;
-                // Show Checking... state
-                const cmd: vscode.Command = {
-                    title: '$(sync~spin) Checking...',
-                    command: '',
-                    tooltip: 'Fetching version info from NPM...'
-                };
-                lenses.push(new vscode.CodeLens(range, cmd));
-
-                // Trigger background fetch if not already pending
-                if (!this.pendingFetches.has(dep.name)) {
-                    this.fetchVersionInBackground(dep.name);
-                }
             }
+
+            // Create a placeholder CodeLens with the dependency data
+            const lens = new vscode.CodeLens(range);
+            (lens as any).dependency = dep;
+            (lens as any).documentUri = document.uri;
+            lenses.push(lens);
+
+            // Also add the NPM link CodeLens immediately as it doesn't need resolution
+            const linkCmd: vscode.Command = {
+                title: '$(link-external) NPM',
+                tooltip: 'Open on NPM',
+                command: 'npmDeps.openOnNpm',
+                arguments: [dep.name]
+            };
+            lenses.push(new vscode.CodeLens(range, linkCmd));
         }
 
         if (!allChecked) {
@@ -75,70 +78,85 @@ export class NpmCodeLensProvider implements vscode.CodeLensProvider {
         return lenses;
     }
 
+    public async resolveCodeLens(codeLens: vscode.CodeLens, _token: vscode.CancellationToken): Promise<vscode.CodeLens> {
+        const dep = (codeLens as any).dependency as ParsedDependency;
+        const uri = (codeLens as any).documentUri as vscode.Uri;
+        
+        if (!dep) {
+            return codeLens;
+        }
+
+        const info = this.versionService.getCachedPackageInfo(dep.name);
+        
+        if (info) {
+            const isUpdateAvailable = VersionResolver.isUpdateAvailable(dep.currentVersion, info.latestVersion);
+            const versionRange = this.getVersionRange(uri, dep);
+            
+            if (isUpdateAvailable) {
+                const risk = VersionResolver.calculateUpdateRisk(dep.currentVersion, info.latestVersion);
+                let title = '';
+                let tooltip = `${t('upToDate')}: ${info.latestVersion}`;
+
+                if (risk === UpdateRisk.High) {
+                    title = `$(warning) ${t('updateTo')} ${info.latestVersion} ⚠️ ${t('majorUpdate')}`;
+                    tooltip += ` (${t('majorUpdate')})`;
+                } else if (risk === UpdateRisk.Medium) {
+                    title = `$(info) ${t('updateTo')} ${info.latestVersion} ${t('minorUpdate')}`;
+                    tooltip += ` (${t('minorUpdate')})`;
+                } else {
+                    title = `$(arrow-circle-up) ${t('updateTo')} ${info.latestVersion}`;
+                    tooltip += ` (${t('patchUpdate')})`;
+                }
+                
+                codeLens.command = {
+                    title: title,
+                    tooltip: tooltip,
+                    command: 'npmDeps.updateVersion',
+                    arguments: [uri, versionRange, dep.currentVersion, info.latestVersion]
+                };
+            } else {
+                codeLens.command = {
+                    title: `$(check-all) ${t('upToDate')}`,
+                    tooltip: `${t('upToDate')}: ${info.latestVersion}`,
+                    command: 'npmDeps.showUpToDate',
+                    arguments: [dep.name, info.latestVersion]
+                };
+            }
+        } else {
+            codeLens.command = {
+                title: `$(sync~spin) ${t('checking')}...`,
+                command: '',
+                tooltip: t('scanning')
+            };
+
+            if (!this.pendingFetches.has(dep.name)) {
+                this.fetchVersionInBackground(dep.name);
+            }
+        }
+
+        return codeLens;
+    }
+
+    private getVersionRange(uri: vscode.Uri, dep: ParsedDependency): vscode.Range {
+        const document = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri.toString());
+        if (!document) {
+            // Fallback: This shouldn't happen in normal usage
+            return new vscode.Range(0, 0, 0, 0);
+        }
+        const versionStartPos = document.positionAt(dep.versionRange.start);
+        const versionEndPos = document.positionAt(dep.versionRange.end);
+        return new vscode.Range(versionStartPos, versionEndPos);
+    }
+
     private async fetchVersionInBackground(packageName: string) {
         this.pendingFetches.add(packageName);
         try {
             await this.versionService.getPackageInfo(packageName);
-            // Once fetched (cached), trigger refresh
             this._onDidChangeCodeLenses.fire();
         } catch (e) {
-            console.error(`Failed to fetch version for ${packageName}`, e);
+            Logger.error(`Failed to fetch version for ${packageName}`, e);
         } finally {
             this.pendingFetches.delete(packageName);
         }
-    }
-
-    private createCodeLenses(lenses: vscode.CodeLens[], document: vscode.TextDocument, dep: ParsedDependency, info: PackageVersionInfo, range: vscode.Range) {
-        // For replacement, we use versionRange
-        const versionStartPos = document.positionAt(dep.versionRange.start);
-        const versionEndPos = document.positionAt(dep.versionRange.end);
-        const versionRange = new vscode.Range(versionStartPos, versionEndPos);
-
-        const isUpdateAvailable = VersionResolver.isUpdateAvailable(dep.currentVersion, info.latestVersion);
-        
-        // 1. Add Update/Status CodeLens (First)
-        if (isUpdateAvailable) {
-            const risk = VersionResolver.calculateUpdateRisk(dep.currentVersion, info.latestVersion);
-            
-            let title = '';
-            let tooltip = `Latest version: ${info.latestVersion}`;
-
-            if (risk === UpdateRisk.High) {
-                title = `$(warning) Upgrade to ${info.latestVersion} ⚠️ Major`;
-                tooltip += ` (Major Update)`;
-            } else if (risk === UpdateRisk.Medium) {
-                title = `$(info) Upgrade to ${info.latestVersion} Minor`;
-                tooltip += ` (Minor Update)`;
-            } else {
-                title = `$(arrow-circle-up) Upgrade to ${info.latestVersion}`;
-                tooltip += ` (Patch Update)`;
-            }
-            
-            const cmd: vscode.Command = {
-                title: title,
-                tooltip: tooltip,
-                command: 'npmDeps.updateVersion',
-                arguments: [document.uri, versionRange, dep.currentVersion, info.latestVersion]
-            };
-            
-            lenses.push(new vscode.CodeLens(range, cmd));
-        } else {
-            const cmd: vscode.Command = {
-                title: '$(check-all) Up to date',
-                tooltip: `Latest version: ${info.latestVersion}`,
-                command: 'npmDeps.showUpToDate',
-                arguments: [dep.name, info.latestVersion]
-            };
-            lenses.push(new vscode.CodeLens(range, cmd));
-        }
-
-        // 2. Add NPM Link Lens (Second)
-        const linkCmd: vscode.Command = {
-            title: '$(link-external) NPM',
-            tooltip: 'Open on NPM',
-            command: 'npmDeps.openOnNpm',
-            arguments: [dep.name]
-        };
-        lenses.push(new vscode.CodeLens(range, linkCmd));
     }
 }
