@@ -5,6 +5,19 @@
   "version": "0.0.1",
   "publisher": "cookabc",
   "license": "MIT",
+  "icon": "icon.png",
+  "homepage": "https://github.com/cookabc/npm-dependencies-updater#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cookabc/npm-dependencies-updater"
+  },
+  "bugs": {
+    "url": "https://github.com/cookabc/npm-dependencies-updater/issues"
+  },
+  "galleryBanner": {
+    "color": "#1e1e1e",
+    "theme": "dark"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -24,7 +37,8 @@
     "package.json",
     "version",
     "update",
-    "upgrade"
+    "upgrade",
+    "manager"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -51,43 +65,43 @@
     "commands": [
       {
         "command": "npmDeps.updateVersion",
-        "title": "Update Dependency Version"
+        "title": "%command.updateVersion%"
       },
       {
         "command": "npmDeps.updateAllVersions",
-        "title": "Update All Dependencies"
+        "title": "%command.updateAllVersions%"
       },
       {
         "command": "npmDeps.showUpToDate",
-        "title": "Show Package Up-to-date Status"
+        "title": "%command.showUpToDate%"
       },
       {
         "command": "npmDeps.openOnNpm",
-        "title": "Open Package on NPM"
+        "title": "%command.openOnNpm%"
       }
     ],
     "configuration": {
-      "title": "NPM Dependencies Updater",
+      "title": "%config.title%",
       "properties": {
         "npmDeps.enabled": {
           "type": "boolean",
           "default": true,
-          "description": "Enable or disable the extension"
+          "description": "%config.enabled.description%"
         },
         "npmDeps.showPrerelease": {
           "type": "boolean",
           "default": false,
-          "description": "Include pre-release versions in version hints"
+          "description": "%config.showPrerelease.description%"
         },
         "npmDeps.cacheTTLMinutes": {
           "type": "number",
           "default": 60,
-          "description": "Cache TTL in minutes for NPM version data"
+          "description": "%config.cacheTTLMinutes.description%"
         },
         "npmDeps.registryUrl": {
           "type": "string",
           "default": "https://registry.npmjs.org",
-          "description": "NPM registry URL"
+          "description": "%config.registryUrl.description%"
         }
       }
     }
@@ -98,7 +112,10 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile",
     "test": "mocha --require ts-node/register 'src/test/**/*.test.ts'",
-    "lint": "eslint src --ext ts"
+    "lint": "eslint src --ext ts",
+    "publish:vsx": "./publish.sh vsx",
+    "publish:ovsx": "./publish.sh ovsx",
+    "publish:all": "./publish.sh all"
   },
   "dependencies": {
     "jsonc-parser": "^3.2.0",
