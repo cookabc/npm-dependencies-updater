@@ -2,7 +2,7 @@
   "name": "npm-dependencies-updater",
   "displayName": "NPM Dependencies Updater",
   "description": "Smart version management for package.json with one-click updates and breaking change detection",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "publisher": "cookabc",
   "license": "MIT",
   "icon": "icon.png",
