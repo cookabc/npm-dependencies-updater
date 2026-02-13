@@ -1,0 +1,121 @@
+{
+  "name": "npm-dependencies-updater",
+  "displayName": "NPM Dependencies Updater",
+  "description": "Smart version management for package.json with one-click updates and breaking change detection",
+  "version": "0.0.1",
+  "publisher": "cookabc",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:json",
+    "onLanguage:jsonc",
+    "workspaceContains:package.json"
+  ],
+  "keywords": [
+    "npm",
+    "node",
+    "dependencies",
+    "package.json",
+    "version",
+    "update",
+    "upgrade"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "colors": [
+      {
+        "id": "npmDeps.upToDate",
+        "description": "Color for up-to-date packages",
+        "defaults": {
+          "dark": "#4CAF50",
+          "light": "#2E7D32",
+          "highContrast": "#00FF00"
+        }
+      },
+      {
+        "id": "npmDeps.updateAvailable",
+        "description": "Color for packages with updates available",
+        "defaults": {
+          "dark": "#FF9800",
+          "light": "#F57C00",
+          "highContrast": "#FFFF00"
+        }
+      }
+    ],
+    "commands": [
+      {
+        "command": "npmDeps.updateVersion",
+        "title": "Update Dependency Version"
+      },
+      {
+        "command": "npmDeps.updateAllVersions",
+        "title": "Update All Dependencies"
+      },
+      {
+        "command": "npmDeps.showUpToDate",
+        "title": "Show Package Up-to-date Status"
+      },
+      {
+        "command": "npmDeps.openOnNpm",
+        "title": "Open Package on NPM"
+      }
+    ],
+    "configuration": {
+      "title": "NPM Dependencies Updater",
+      "properties": {
+        "npmDeps.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable or disable the extension"
+        },
+        "npmDeps.showPrerelease": {
+          "type": "boolean",
+          "default": false,
+          "description": "Include pre-release versions in version hints"
+        },
+        "npmDeps.cacheTTLMinutes": {
+          "type": "number",
+          "default": 60,
+          "description": "Cache TTL in minutes for NPM version data"
+        },
+        "npmDeps.registryUrl": {
+          "type": "string",
+          "default": "https://registry.npmjs.org",
+          "description": "NPM registry URL"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "test": "mocha --require ts-node/register 'src/test/**/*.test.ts'",
+    "lint": "eslint src --ext ts"
+  },
+  "dependencies": {
+    "jsonc-parser": "^3.2.0",
+    "semver": "^7.5.4"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.3.11",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "@types/semver": "^7.5.6",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "chai": "^4.3.10",
+    "eslint": "^8.54.0",
+    "mocha": "^10.2.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.2"
+  }
+}
