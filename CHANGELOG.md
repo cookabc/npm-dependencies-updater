@@ -2,7 +2,7 @@
 
 All notable changes to the "npm-dependencies-updater" extension will be documented in this file.
 
-## [0.0.1] - 2024-03-21
+## [0.0.1] - 2026-02-13
 
 - Initial release of NPM Dependencies Updater.
 - Support for scanning `package.json` and checking version status.
