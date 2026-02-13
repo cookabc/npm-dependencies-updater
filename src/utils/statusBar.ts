@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { t } from './i18n';
 
 export class StatusBarManager {
     private statusBarItem: vscode.StatusBarItem;
@@ -11,27 +12,27 @@ export class StatusBarManager {
     }
 
     public showChecking() {
-        this.statusBarItem.text = '$(sync~spin) Checking dependencies...';
+        this.statusBarItem.text = `$(sync~spin) ${t('checkingDeps')}`;
         this.statusBarItem.backgroundColor = undefined;
-        this.statusBarItem.tooltip = 'Scanning for updates...';
+        this.statusBarItem.tooltip = t('scanning');
     }
 
     public update(updateCount: number, hasRiskyUpdates: boolean) {
         if (updateCount === 0) {
-            this.statusBarItem.text = '$(check) Dependencies up to date';
+            this.statusBarItem.text = `$(check) ${t('upToDate')}`;
             this.statusBarItem.backgroundColor = undefined;
-            this.statusBarItem.tooltip = 'All dependencies are up to date';
+            this.statusBarItem.tooltip = t('allUpToDate');
         } else {
-            this.statusBarItem.text = `$(warning) ${updateCount} updates available`;
+            this.statusBarItem.text = `$(warning) ${updateCount} ${t('updatesAvailable')}`;
             this.statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
             
-            const riskyText = hasRiskyUpdates ? ' (Includes major updates)' : '';
-            this.statusBarItem.tooltip = `Click to update ${updateCount} packages${riskyText}`;
+            const riskyText = hasRiskyUpdates ? t('includesMajor') : '';
+            this.statusBarItem.tooltip = `${t('clickToUpdate')} ${updateCount} packages${riskyText}`;
         }
     }
 
     public reset() {
-        this.statusBarItem.text = '$(package) NPM Dependencies';
+        this.statusBarItem.text = `$(package) ${t('npmDeps')}`;
         this.statusBarItem.backgroundColor = undefined;
         this.statusBarItem.tooltip = 'NPM Dependencies Updater';
     }

@@ -6,15 +6,18 @@ import { VersionResolver } from './core/versionResolver';
 import { PackageJsonParser } from './core/packageJsonParser';
 import { UpdateRisk } from './types';
 import { StatusBarManager } from './utils/statusBar';
+import { t } from './utils/i18n';
+import { Logger } from './utils/logger';
 
 export function activate(context: vscode.ExtensionContext) {
-    console.log('NPM Dependencies Updater is now active!');
+    Logger.init('NPM Dependencies');
+    Logger.log('NPM Dependencies Updater is now active!');
 
     const config = vscode.workspace.getConfiguration('npmDeps');
     const ttl = config.get<number>('cacheTTLMinutes', 60);
     const registryUrl = config.get<string>('registryUrl', 'https://registry.npmjs.org');
 
-    const versionService = new VersionService(ttl, registryUrl);
+    const versionService = new VersionService(ttl, registryUrl, context.globalState);
     const parser = new PackageJsonParser();
     const statusBar = new StatusBarManager();
 
@@ -42,11 +45,11 @@ export function activate(context: vscode.ExtensionContext) {
             
             if (risk === UpdateRisk.High) {
                 const answer = await vscode.window.showWarningMessage(
-                    `Updating ${currentVersion} to ${newVersion} is a major update. Continue?`,
+                    `Updating ${currentVersion} to ${newVersion} ${t('majorWarning')}`,
                     { modal: true },
-                    'Update Anyway'
+                    t('updateAnyway')
                 );
-                if (answer !== 'Update Anyway') {
+                if (answer !== t('updateAnyway')) {
                     return;
                 }
             }
@@ -62,7 +65,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.commands.registerCommand('npmDeps.showUpToDate', (packageName: string, version: string) => {
-            vscode.window.showInformationMessage(`${packageName} is up to date (v${version})`);
+            vscode.window.showInformationMessage(`${packageName} ${t('packageUpToDate')} (v${version})`);
         })
     );
 
@@ -76,7 +79,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('npmDeps.updateAllVersions', async () => {
             const editor = vscode.window.activeTextEditor;
             if (!editor || !editor.document.fileName.endsWith('package.json')) {
-                vscode.window.showErrorMessage('Please open a package.json file');
+                vscode.window.showErrorMessage(t('openPackageJson'));
                 return;
             }
 
@@ -88,12 +91,12 @@ export function activate(context: vscode.ExtensionContext) {
             
             await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
-                title: "Scanning for updates...",
+                title: t('scanning'),
                 cancellable: true
             }, async (progress, token) => {
                 for (const dep of dependencies) {
                     if (token.isCancellationRequested) return;
-                    progress.report({ message: `Checking ${dep.name}...` });
+                    progress.report({ message: `${t('checking')} ${dep.name}...` });
                     const info = await versionService.getPackageInfo(dep.name);
                     
                     if (info && VersionResolver.isUpdateAvailable(dep.currentVersion, info.latestVersion)) {
@@ -104,7 +107,7 @@ export function activate(context: vscode.ExtensionContext) {
             });
 
             if (updates.length === 0) {
-                vscode.window.showInformationMessage('All packages are up to date.');
+                vscode.window.showInformationMessage(t('allUpToDate'));
                 return;
             }
 
@@ -116,19 +119,19 @@ export function activate(context: vscode.ExtensionContext) {
 
             // 3. Prompt if risky
             if (riskyUpdates.length > 0) {
-                const message = `⚠️ Found ${riskyUpdates.length} major version update(s) that may include breaking changes:\n\n` +
+                const message = t('majorFound', riskyUpdates.length) + '\n\n' +
                     riskyUpdates.map(u => `• ${u.dep.name}: ${u.dep.currentVersion} → ${u.info.latestVersion}`).join('\n');
                 
                 const answer = await vscode.window.showWarningMessage(
                     message,
                     { modal: true },
-                    'Update Safe Only',
-                    'Update All (Including Risky)'
+                    t('updateSafeOnly'),
+                    t('updateAllRisky')
                 );
 
-                if (answer === 'Update Safe Only') {
+                if (answer === t('updateSafeOnly')) {
                     updatesToApply = safeUpdates;
-                } else if (answer === 'Update All (Including Risky)') {
+                } else if (answer === t('updateAllRisky')) {
                     updatesToApply = updates;
                 } else {
                     return; // Cancel
@@ -153,7 +156,7 @@ export function activate(context: vscode.ExtensionContext) {
             }
 
             await vscode.workspace.applyEdit(edit);
-            vscode.window.showInformationMessage(`Updated ${updatesToApply.length} packages.`);
+            vscode.window.showInformationMessage(t('updatedCount', updatesToApply.length));
             codeLensProvider.refresh();
         })
     );
