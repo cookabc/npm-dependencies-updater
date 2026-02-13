@@ -35,3 +35,6 @@ coverage/
 
 # TypeScript
 *.tsbuildinfo
+
+# Temporary test files
+test-manual.js*
