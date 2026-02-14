@@ -2,6 +2,12 @@
 
 All notable changes to the "npm-dependencies-updater" extension will be documented in this file.
 
+## [0.1.1] - 2026-02-14
+
+### Fixed
+- Fixed extension bundling issue where `jsonc-parser` was not correctly included.
+- Fixed `lint-staged` configuration.
+
 ## [0.0.1] - 2026-02-13
 
 - Initial release of NPM Dependencies Updater.
