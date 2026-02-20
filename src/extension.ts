@@ -38,14 +38,32 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Register Commands
     context.subscriptions.push(
-        vscode.commands.registerCommand('npmDeps.updateVersion', async (uri: vscode.Uri, range: vscode.Range, currentVersion: string, newVersion: string) => {
-            const formattedVersion = VersionResolver.formatNewVersion(currentVersion, newVersion);
+        vscode.commands.registerCommand('npmDeps.updateVersion', async (uri: vscode.Uri, range: vscode.Range, packageName: string, currentVersion: string, newVersion: string) => {
+            const document = await vscode.workspace.openTextDocument(uri);
             
-            const risk = VersionResolver.calculateUpdateRisk(currentVersion, newVersion);
+            // Re-parse to always find the latest location of the dependency
+            // This handles cases where the document was modified (e.g. lines added/removed)
+            // between the time the CodeLens was generated and the command was executed.
+            const deps = parser.parse(document.getText());
+            const dep = deps.find(d => d.name === packageName);
+
+            if (!dep) {
+                vscode.window.showErrorMessage(t('packageNotFound') + `: ${packageName}`);
+                return;
+            }
+
+            const startPos = document.positionAt(dep.versionRange.start);
+            const endPos = document.positionAt(dep.versionRange.end);
+            const targetRange = new vscode.Range(startPos, endPos);
+            const actualCurrentVersion = dep.currentVersion;
+
+            const formattedVersion = VersionResolver.formatNewVersion(actualCurrentVersion, newVersion);
+
+            const risk = VersionResolver.calculateUpdateRisk(actualCurrentVersion, newVersion);
             
             if (risk === UpdateRisk.High) {
                 const answer = await vscode.window.showWarningMessage(
-                    `Updating ${currentVersion} to ${newVersion} ${t('majorWarning')}`,
+                    `Updating ${packageName} to ${newVersion} ${t('majorWarning')}`,
                     { modal: true },
                     t('updateAnyway')
                 );
@@ -55,7 +73,7 @@ export function activate(context: vscode.ExtensionContext) {
             }
 
             const edit = new vscode.WorkspaceEdit();
-            edit.replace(uri, range, `"${formattedVersion}"`);
+            edit.replace(uri, targetRange, `"${formattedVersion}"`);
             await vscode.workspace.applyEdit(edit);
             
             // Refresh CodeLens
@@ -144,20 +162,33 @@ export function activate(context: vscode.ExtensionContext) {
 
             // 4. Apply updates
             const edit = new vscode.WorkspaceEdit();
+
+            // Re-parse to ensure ranges are correct
+            const freshDependencies = parser.parse(document.getText());
+            let appliedCount = 0;
+
             for (const { dep, info } of updatesToApply) {
-                const formattedVersion = VersionResolver.formatNewVersion(dep.currentVersion, info.latestVersion);
+                const freshDep = freshDependencies.find(d => d.name === dep.name);
+                if (!freshDep) {
+                    continue;
+                }
+
+                const formattedVersion = VersionResolver.formatNewVersion(freshDep.currentVersion, info.latestVersion);
                 
                 // Convert offsets to Range
-                const startPos = document.positionAt(dep.versionRange.start);
-                const endPos = document.positionAt(dep.versionRange.end);
+                const startPos = document.positionAt(freshDep.versionRange.start);
+                const endPos = document.positionAt(freshDep.versionRange.end);
                 const range = new vscode.Range(startPos, endPos);
                 
                 edit.replace(document.uri, range, `"${formattedVersion}"`);
+                appliedCount++;
             }
 
-            await vscode.workspace.applyEdit(edit);
-            vscode.window.showInformationMessage(t('updatedCount', updatesToApply.length));
-            codeLensProvider.refresh();
+            if (appliedCount > 0) {
+                await vscode.workspace.applyEdit(edit);
+                vscode.window.showInformationMessage(t('updatedCount', appliedCount));
+                codeLensProvider.refresh();
+            }
         })
     );
 }

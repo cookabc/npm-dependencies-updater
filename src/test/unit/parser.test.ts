@@ -38,4 +38,24 @@ describe('PackageJsonParser', () => {
         const deps = parser.parse('{"name": "test"}');
         assert.strictEqual(deps.length, 0);
     });
+
+    it('should calculate correct version ranges (including quotes)', () => {
+        const parser = new PackageJsonParser();
+        const json = `{
+    "dependencies": {
+        "foo": "1.0.0"
+    }
+}`;
+        const deps = parser.parse(json);
+        const dep = deps.find(d => d.name === 'foo');
+        assert.ok(dep);
+
+        // "foo": "1.0.0"
+        // Key offset: 27 ("foo")
+        // Value offset: 34 ("1.0.0")
+        // "1.0.0" length is 7 (quotes + 5 chars)
+
+        const versionString = json.substring(dep!.versionRange.start, dep!.versionRange.end);
+        assert.strictEqual(versionString, '"1.0.0"');
+    });
 });

@@ -112,7 +112,7 @@ export class NpmCodeLensProvider implements vscode.CodeLensProvider {
                     title: title,
                     tooltip: tooltip,
                     command: 'npmDeps.updateVersion',
-                    arguments: [uri, versionRange, dep.currentVersion, info.latestVersion]
+                    arguments: [uri, versionRange, dep.name, dep.currentVersion, info.latestVersion]
                 };
             } else {
                 codeLens.command = {

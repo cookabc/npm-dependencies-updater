@@ -7,8 +7,10 @@ import { Logger } from '../utils/logger';
 export class VersionService {
     private client: NpmClient;
     private cache: PackageCache;
+    private memento?: vscode.Memento;
 
     constructor(cacheTTLMinutes: number = 60, registryUrl?: string, memento?: vscode.Memento) {
+        this.memento = memento;
         this.client = new NpmClient(registryUrl);
         this.cache = new PackageCache(cacheTTLMinutes, memento);
     }
@@ -40,7 +42,7 @@ export class VersionService {
     }
 
     public updateConfiguration(ttlMinutes: number, registryUrl?: string) {
-        this.cache = new PackageCache(ttlMinutes);
+        this.cache = new PackageCache(ttlMinutes, this.memento);
         this.client = new NpmClient(registryUrl);
     }
 }
