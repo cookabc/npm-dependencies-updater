@@ -7,13 +7,23 @@ import { Logger } from '../utils/logger';
 export class NpmHoverProvider implements vscode.HoverProvider {
     private parser: PackageJsonParser;
     private versionService: VersionService;
+    private enabled: boolean;
 
-    constructor(versionService: VersionService) {
+    constructor(versionService: VersionService, enabled: boolean = true) {
         this.parser = new PackageJsonParser();
         this.versionService = versionService;
+        this.enabled = enabled;
+    }
+
+    public setEnabled(enabled: boolean): void {
+        this.enabled = enabled;
     }
 
     public async provideHover(document: vscode.TextDocument, position: vscode.Position, _token: vscode.CancellationToken): Promise<vscode.Hover | undefined> {
+        if (!this.enabled) {
+            return undefined;
+        }
+
         const dependencies = this.parser.parse(document.getText());
         const offset = document.offsetAt(position);
         

@@ -4,26 +4,43 @@ import { NpmCodeLensProvider } from './providers/codeLensProvider';
 import { NpmHoverProvider } from './providers/hoverProvider';
 import { VersionResolver } from './core/versionResolver';
 import { PackageJsonParser } from './core/packageJsonParser';
-import { UpdateRisk } from './types';
+import { UpdateRisk, ParsedDependency, PackageVersionInfo } from './types';
 import { StatusBarManager } from './utils/statusBar';
 import { t } from './utils/i18n';
 import { Logger } from './utils/logger';
 
 export function activate(context: vscode.ExtensionContext) {
     Logger.init('NPM Dependencies');
-    Logger.log('NPM Dependencies Updater is now active!');
+    Logger.log(t('npmDeps') + ' is now active!');
 
     const config = vscode.workspace.getConfiguration('npmDeps');
     const ttl = config.get<number>('cacheTTLMinutes', 60);
     const registryUrl = config.get<string>('registryUrl', 'https://registry.npmjs.org');
+    const enabled = config.get<boolean>('enabled', true);
 
     const versionService = new VersionService(ttl, registryUrl, context.globalState);
     const parser = new PackageJsonParser();
     const statusBar = new StatusBarManager();
 
     // Register Providers
-    const codeLensProvider = new NpmCodeLensProvider(versionService, statusBar);
-    const hoverProvider = new NpmHoverProvider(versionService);
+    const codeLensProvider = new NpmCodeLensProvider(versionService, statusBar, enabled);
+    const hoverProvider = new NpmHoverProvider(versionService, enabled);
+
+    // Listen for configuration changes
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration('npmDeps')) {
+                const newConfig = vscode.workspace.getConfiguration('npmDeps');
+                const newEnabled = newConfig.get<boolean>('enabled', true);
+                const newTtl = newConfig.get<number>('cacheTTLMinutes', 60);
+                const newRegistryUrl = newConfig.get<string>('registryUrl', 'https://registry.npmjs.org');
+                versionService.updateConfiguration(newTtl, newRegistryUrl, context.globalState);
+                codeLensProvider.setEnabled(newEnabled);
+                hoverProvider.setEnabled(newEnabled);
+                codeLensProvider.refresh();
+            }
+        })
+    );
 
     const selector: vscode.DocumentSelector = [
         { language: 'json', pattern: '**/package.json' },
@@ -86,22 +103,32 @@ export function activate(context: vscode.ExtensionContext) {
             const document = editor.document;
             const dependencies = parser.parse(document.getText());
             
-            // 1. Scan for updates
-            const updates: { dep: any, info: any, risk: UpdateRisk }[] = [];
+            // 1. Scan for updates (parallel)
+            const updates: { dep: ParsedDependency, info: PackageVersionInfo, risk: UpdateRisk }[] = [];
             
             await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
                 title: t('scanning'),
                 cancellable: true
             }, async (progress, token) => {
-                for (const dep of dependencies) {
-                    if (token.isCancellationRequested) return;
-                    progress.report({ message: `${t('checking')} ${dep.name}...` });
-                    const info = await versionService.getPackageInfo(dep.name);
-                    
-                    if (info && VersionResolver.isUpdateAvailable(dep.currentVersion, info.latestVersion)) {
-                        const risk = VersionResolver.calculateUpdateRisk(dep.currentVersion, info.latestVersion);
-                        updates.push({ dep, info, risk });
+                let completed = 0;
+                const results = await Promise.allSettled(
+                    dependencies.map(async (dep) => {
+                        if (token.isCancellationRequested) return null;
+                        const info = await versionService.getPackageInfo(dep.name);
+                        completed++;
+                        progress.report({ message: `${t('checking')} (${completed}/${dependencies.length})` });
+                        return { dep, info };
+                    })
+                );
+
+                for (const result of results) {
+                    if (result.status === 'fulfilled' && result.value) {
+                        const { dep, info } = result.value;
+                        if (info && VersionResolver.isUpdateAvailable(dep.currentVersion, info.latestVersion)) {
+                            const risk = VersionResolver.calculateUpdateRisk(dep.currentVersion, info.latestVersion);
+                            updates.push({ dep, info, risk });
+                        }
                     }
                 }
             });

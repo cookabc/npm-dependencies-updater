@@ -45,7 +45,12 @@ export class NpmClient {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-            const response = await fetch(url, { signal: controller.signal });
+            const response = await fetch(url, {
+                signal: controller.signal,
+                headers: {
+                    'Accept': 'application/vnd.npm.install-v1+json'
+                }
+            });
             clearTimeout(timeoutId);
 
             if (response.status === 404) {

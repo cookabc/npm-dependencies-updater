@@ -7,6 +7,19 @@ import { StatusBarManager } from '../utils/statusBar';
 import { t } from '../utils/i18n';
 import { Logger } from '../utils/logger';
 
+/**
+ * Custom CodeLens that stores dependency and document info for resolution
+ */
+class DependencyCodeLens extends vscode.CodeLens {
+    constructor(
+        range: vscode.Range,
+        public readonly dependency: ParsedDependency,
+        public readonly documentUri: vscode.Uri,
+    ) {
+        super(range);
+    }
+}
+
 export class NpmCodeLensProvider implements vscode.CodeLensProvider {
     private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
     public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
@@ -15,11 +28,17 @@ export class NpmCodeLensProvider implements vscode.CodeLensProvider {
     private versionService: VersionService;
     private statusBar: StatusBarManager;
     private pendingFetches: Set<string> = new Set();
+    private enabled: boolean;
 
-    constructor(versionService: VersionService, statusBar: StatusBarManager) {
+    constructor(versionService: VersionService, statusBar: StatusBarManager, enabled: boolean = true) {
         this.parser = new PackageJsonParser();
         this.versionService = versionService;
         this.statusBar = statusBar;
+        this.enabled = enabled;
+    }
+
+    public setEnabled(enabled: boolean): void {
+        this.enabled = enabled;
     }
 
     public refresh(): void {
@@ -27,8 +46,18 @@ export class NpmCodeLensProvider implements vscode.CodeLensProvider {
     }
 
     public async provideCodeLenses(document: vscode.TextDocument, _token: vscode.CancellationToken): Promise<vscode.CodeLens[]> {
+        if (!this.enabled) {
+            return [];
+        }
+
         const lenses: vscode.CodeLens[] = [];
-        const dependencies = this.parser.parse(document.getText());
+        let dependencies: ParsedDependency[];
+        try {
+            dependencies = this.parser.parse(document.getText());
+        } catch (e) {
+            Logger.error('Failed to parse package.json', e);
+            return [];
+        }
 
         let totalUpdates = 0;
         let hasRiskyUpdates = false;
@@ -53,20 +82,16 @@ export class NpmCodeLensProvider implements vscode.CodeLensProvider {
                 allChecked = false;
             }
 
-            // Create a placeholder CodeLens with the dependency data
-            const lens = new vscode.CodeLens(range);
-            (lens as any).dependency = dep;
-            (lens as any).documentUri = document.uri;
-            lenses.push(lens);
+            // Create a typed CodeLens with the dependency data
+            lenses.push(new DependencyCodeLens(range, dep, document.uri));
 
             // Also add the NPM link CodeLens immediately as it doesn't need resolution
-            const linkCmd: vscode.Command = {
+            lenses.push(new vscode.CodeLens(range, {
                 title: '$(link-external) NPM',
-                tooltip: 'Open on NPM',
+                tooltip: t('npmDeps'),
                 command: 'npmDeps.openOnNpm',
                 arguments: [dep.name]
-            };
-            lenses.push(new vscode.CodeLens(range, linkCmd));
+            }));
         }
 
         if (!allChecked) {
@@ -79,20 +104,24 @@ export class NpmCodeLensProvider implements vscode.CodeLensProvider {
     }
 
     public async resolveCodeLens(codeLens: vscode.CodeLens, _token: vscode.CancellationToken): Promise<vscode.CodeLens> {
-        const dep = (codeLens as any).dependency as ParsedDependency;
-        const uri = (codeLens as any).documentUri as vscode.Uri;
-        
-        if (!dep) {
+        if (!(codeLens instanceof DependencyCodeLens)) {
             return codeLens;
         }
+
+        const dep = codeLens.dependency;
+        const uri = codeLens.documentUri;
 
         const info = this.versionService.getCachedPackageInfo(dep.name);
         
         if (info) {
             const isUpdateAvailable = VersionResolver.isUpdateAvailable(dep.currentVersion, info.latestVersion);
-            const versionRange = this.getVersionRange(uri, dep);
             
             if (isUpdateAvailable) {
+                const versionRange = this.getVersionRange(uri, dep);
+                if (!versionRange) {
+                    return codeLens;
+                }
+
                 const risk = VersionResolver.calculateUpdateRisk(dep.currentVersion, info.latestVersion);
                 let title = '';
                 let tooltip = `${t('upToDate')}: ${info.latestVersion}`;
@@ -137,11 +166,11 @@ export class NpmCodeLensProvider implements vscode.CodeLensProvider {
         return codeLens;
     }
 
-    private getVersionRange(uri: vscode.Uri, dep: ParsedDependency): vscode.Range {
+    private getVersionRange(uri: vscode.Uri, dep: ParsedDependency): vscode.Range | undefined {
         const document = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri.toString());
         if (!document) {
-            // Fallback: This shouldn't happen in normal usage
-            return new vscode.Range(0, 0, 0, 0);
+            Logger.error(`Document not found for URI: ${uri.toString()}`);
+            return undefined;
         }
         const versionStartPos = document.positionAt(dep.versionRange.start);
         const versionEndPos = document.positionAt(dep.versionRange.end);

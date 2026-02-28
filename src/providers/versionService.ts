@@ -39,8 +39,8 @@ export class VersionService {
         return null;
     }
 
-    public updateConfiguration(ttlMinutes: number, registryUrl?: string) {
-        this.cache = new PackageCache(ttlMinutes);
+    public updateConfiguration(ttlMinutes: number, registryUrl?: string, memento?: vscode.Memento) {
+        this.cache = new PackageCache(ttlMinutes, memento);
         this.client = new NpmClient(registryUrl);
     }
 }

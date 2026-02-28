@@ -6,14 +6,14 @@ This is a **VS Code Extension** that provides smart version management for `pack
 
 - **Extension Name**: NPM Dependencies Updater
 - **Publisher**: cookabc
-- **Version**: 0.0.1
+- **Version**: 0.2.0
 - **License**: MIT
 - **Repository**: https://github.com/cookabc/npm-dependencies-updater
 
 ## Technology Stack
 
 - **Language**: TypeScript 5.3.2
-- **Target**: ES2022, CommonJS modules
+- **Target**: ES2020, CommonJS modules
 - **Runtime**: Node.js (VS Code Extension Host)
 - **VS Code Engine**: ^1.85.0
 

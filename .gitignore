@@ -38,3 +38,4 @@ coverage/
 
 # Temporary test files
 test-manual.js*
+test-manual.js

@@ -96,12 +96,13 @@ function getLocale(): string {
     }
     const language = locale.split('-')[0];
     if (language === 'zh') {
-        return locale.includes('tw') || locale.includes('hk') ? 'zh-tw' : 'zh-cn';
+        // Fall back to zh-cn for all Chinese variants (no zh-tw messages yet)
+        return 'zh-cn';
     }
     return 'en';
 }
 
-export function t(key: keyof Messages, ...args: any[]): string {
+export function t(key: keyof Messages, ...args: (string | number)[]): string {
     const locale = getLocale();
     let msg = messages[locale]?.[key] || messages['en'][key];
     if (args.length > 0) {
