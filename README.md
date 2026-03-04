@@ -81,6 +81,21 @@ npm run compile
 npm test
 ```
 
-## 📄 License
+## � Publishing
+
+```bash
+# Publish to both VS Code Marketplace and OpenVSX
+./publish.sh all
+
+# Publish to VS Code Marketplace only
+./publish.sh vsx
+
+# Publish to OpenVSX only
+./publish.sh ovsx
+```
+
+**Prerequisites:** Azure DevOps Personal Access Token with Marketplace permissions. See [VS Code Publishing Docs](https://code.visualstudio.com/api/working-with-extensions/publishing-extension) for setup details.
+
+## �📄 License
 
 MIT License. See [LICENSE](LICENSE) for details.
