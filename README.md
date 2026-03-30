@@ -25,6 +25,7 @@ Smart version management for `package.json` with one-click updates and breaking 
 4. Click Install
 
 Or install from command line:
+
 ```bash
 code --install-extension cookabc.npm-dependencies-updater
 ```
@@ -42,12 +43,12 @@ code --install-extension cookabc.npm-dependencies-updater
 
 ## ⚙️ Configuration
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `npmDeps.enabled` | `true` | Enable/disable the extension |
-| `npmDeps.showPrerelease` | `false` | Include pre-release versions |
-| `npmDeps.cacheTTLMinutes` | `60` | Cache TTL in minutes |
-| `npmDeps.registryUrl` | `https://registry.npmjs.org` | Custom NPM registry URL |
+| Setting                   | Default                      | Description                  |
+| ------------------------- | ---------------------------- | ---------------------------- |
+| `npmDeps.enabled`         | `true`                       | Enable/disable the extension |
+| `npmDeps.showPrerelease`  | `false`                      | Include pre-release versions |
+| `npmDeps.cacheTTLMinutes` | `60`                         | Cache TTL in minutes         |
+| `npmDeps.registryUrl`     | `https://registry.npmjs.org` | Custom NPM registry URL      |
 
 ## 🏗️ Project Structure
 

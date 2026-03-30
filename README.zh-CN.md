@@ -25,6 +25,7 @@
 4. 点击安装
 
 或者通过命令行安装：
+
 ```bash
 code --install-extension cookabc.npm-dependencies-updater
 ```
@@ -42,12 +43,12 @@ code --install-extension cookabc.npm-dependencies-updater
 
 ## ⚙️ 配置项
 
-| 设置项 | 默认值 | 描述 |
-|---------|---------|-------------|
-| `npmDeps.enabled` | `true` | 启用/禁用扩展 |
-| `npmDeps.showPrerelease` | `false` | 是否包含预发布版本 |
-| `npmDeps.cacheTTLMinutes` | `60` | 缓存过期时间（分钟） |
-| `npmDeps.registryUrl` | `https://registry.npmjs.org` | 自定义 NPM 注册表地址 |
+| 设置项                    | 默认值                       | 描述                  |
+| ------------------------- | ---------------------------- | --------------------- |
+| `npmDeps.enabled`         | `true`                       | 启用/禁用扩展         |
+| `npmDeps.showPrerelease`  | `false`                      | 是否包含预发布版本    |
+| `npmDeps.cacheTTLMinutes` | `60`                         | 缓存过期时间（分钟）  |
+| `npmDeps.registryUrl`     | `https://registry.npmjs.org` | 自定义 NPM 注册表地址 |
 
 ## 🏗️ 项目结构
 

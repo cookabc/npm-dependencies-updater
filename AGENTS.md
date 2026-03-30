@@ -18,10 +18,12 @@ This is a **VS Code Extension** that provides smart version management for `pack
 - **VS Code Engine**: ^1.85.0
 
 ### Dependencies
+
 - `jsonc-parser` (^3.2.0) - Robust JSON/JSONC parsing for package.json
 - `semver` (^7.5.4) - Semantic versioning utilities
 
 ### Dev Dependencies
+
 - `typescript` (^5.3.2)
 - `eslint` (^8.54.0) with `@typescript-eslint/*` plugins
 - `mocha` (^10.2.0) + `chai` (^4.3.10) - Unit testing
@@ -73,6 +75,7 @@ src/
 ```
 
 ### Output Structure
+
 ```
 out/                         # Compiled JavaScript (gitignored)
 ├── extension.js             # Main entry point
@@ -86,12 +89,14 @@ out/                         # Compiled JavaScript (gitignored)
 ## Architecture
 
 ### Extension Activation
+
 1. `extension.ts` exports `activate()` and `deactivate()` functions
 2. Registers CodeLens provider for `json` and `jsonc` languages
 3. Registers commands: `npmDeps.updateVersion`, `npmDeps.updateAllVersions`, `npmDeps.showUpToDate`, `npmDeps.openOnNpm`
 4. Initializes `StatusBarManager` for update summaries
 
 ### Data Flow
+
 1. `NpmCodeLensProvider` scans `package.json` for dependencies
 2. Calls `VersionService` to get the latest version for each package
 3. `VersionService` checks `Cache` first, then uses `NpmClient` if needed
