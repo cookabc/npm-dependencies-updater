@@ -4,32 +4,32 @@ const production = process.argv.includes("--production");
 const watch = process.argv.includes("--watch");
 
 async function main() {
-  const ctx = await esbuild.context({
-    entryPoints: ["src/extension.ts"],
-    bundle: true,
-    format: "cjs",
-    mainFields: ["module", "main"],
-    minify: production,
-    sourcemap: !production,
-    sourcesContent: false,
-    platform: "node",
-    outfile: "dist/extension.js",
-    external: ["vscode"],
-    logLevel: "silent",
-    plugins: [
-      /* add any necessary plugins here */
-    ],
-  });
+	const ctx = await esbuild.context({
+		entryPoints: ["src/extension.ts"],
+		bundle: true,
+		format: "cjs",
+		mainFields: ["module", "main"],
+		minify: production,
+		sourcemap: !production,
+		sourcesContent: false,
+		platform: "node",
+		outfile: "dist/extension.js",
+		external: ["vscode"],
+		logLevel: "silent",
+		plugins: [
+			/* add any necessary plugins here */
+		],
+	});
 
-  if (watch) {
-    await ctx.watch();
-  } else {
-    await ctx.rebuild();
-    await ctx.dispose();
-  }
+	if (watch) {
+		await ctx.watch();
+	} else {
+		await ctx.rebuild();
+		await ctx.dispose();
+	}
 }
 
 main().catch((e) => {
-  console.error(e);
-  process.exit(1);
+	console.error(e);
+	process.exit(1);
 });
