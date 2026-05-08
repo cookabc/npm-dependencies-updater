@@ -1,8 +1,8 @@
 import * as vscode from "vscode";
 import { PackageJsonParser } from "../core/packageJsonParser";
-import { VersionService } from "./versionService";
 import { t } from "../utils/i18n";
 import { Logger } from "../utils/logger";
+import type { VersionService } from "./versionService";
 
 export class NpmHoverProvider implements vscode.HoverProvider {
 	private parser: PackageJsonParser;

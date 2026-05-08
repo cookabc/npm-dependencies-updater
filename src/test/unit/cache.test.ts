@@ -1,6 +1,6 @@
 import * as assert from "assert";
-import { PackageCache, IMemento } from "../../core/cache";
-import { PackageVersionInfo } from "../../types";
+import { type IMemento, PackageCache } from "../../core/cache";
+import type { PackageVersionInfo } from "../../types";
 
 class MockMemento implements IMemento {
 	private storage = new Map<string, any>();

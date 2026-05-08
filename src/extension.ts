@@ -1,13 +1,17 @@
 import * as vscode from "vscode";
-import { VersionService } from "./providers/versionService";
+import { PackageJsonParser } from "./core/packageJsonParser";
+import { VersionResolver } from "./core/versionResolver";
 import { NpmCodeLensProvider } from "./providers/codeLensProvider";
 import { NpmHoverProvider } from "./providers/hoverProvider";
-import { VersionResolver } from "./core/versionResolver";
-import { PackageJsonParser } from "./core/packageJsonParser";
-import { UpdateRisk, ParsedDependency, PackageVersionInfo } from "./types";
-import { StatusBarManager } from "./utils/statusBar";
+import { VersionService } from "./providers/versionService";
+import {
+	type PackageVersionInfo,
+	type ParsedDependency,
+	UpdateRisk,
+} from "./types";
 import { t } from "./utils/i18n";
 import { Logger } from "./utils/logger";
+import { StatusBarManager } from "./utils/statusBar";
 
 export function activate(context: vscode.ExtensionContext) {
 	Logger.init("NPM Dependencies");

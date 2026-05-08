@@ -1,150 +1,149 @@
 {
-	"name": "npm-dependencies-updater",
-	"displayName": "NPM Dependencies Updater",
-	"description": "Smart version management for package.json with one-click updates and breaking change detection",
-	"version": "0.2.0",
-	"publisher": "cookabc",
-	"license": "MIT",
-	"icon": "icon.png",
-	"homepage": "https://github.com/cookabc/npm-dependencies-updater#readme",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/cookabc/npm-dependencies-updater"
-	},
-	"bugs": {
-		"url": "https://github.com/cookabc/npm-dependencies-updater/issues"
-	},
-	"galleryBanner": {
-		"color": "#1e1e1e",
-		"theme": "dark"
-	},
-	"engines": {
-		"vscode": "^1.85.0"
-	},
-	"categories": [
-		"Programming Languages",
-		"Other"
-	],
-	"activationEvents": [
-		"onLanguage:json",
-		"onLanguage:jsonc",
-		"workspaceContains:package.json"
-	],
-	"keywords": [
-		"npm",
-		"node",
-		"dependencies",
-		"package.json",
-		"version",
-		"update",
-		"upgrade",
-		"manager"
-	],
-	"main": "./dist/extension.js",
-	"contributes": {
-		"colors": [
-			{
-				"id": "npmDeps.upToDate",
-				"description": "Color for up-to-date packages",
-				"defaults": {
-					"dark": "#4CAF50",
-					"light": "#2E7D32",
-					"highContrast": "#00FF00"
-				}
-			},
-			{
-				"id": "npmDeps.updateAvailable",
-				"description": "Color for packages with updates available",
-				"defaults": {
-					"dark": "#FF9800",
-					"light": "#F57C00",
-					"highContrast": "#FFFF00"
-				}
-			}
-		],
-		"commands": [
-			{
-				"command": "npmDeps.updateVersion",
-				"title": "%command.updateVersion%"
-			},
-			{
-				"command": "npmDeps.updateAllVersions",
-				"title": "%command.updateAllVersions%"
-			},
-			{
-				"command": "npmDeps.showUpToDate",
-				"title": "%command.showUpToDate%"
-			},
-			{
-				"command": "npmDeps.openOnNpm",
-				"title": "%command.openOnNpm%"
-			}
-		],
-		"configuration": {
-			"title": "%config.title%",
-			"properties": {
-				"npmDeps.enabled": {
-					"type": "boolean",
-					"default": true,
-					"description": "%config.enabled.description%"
-				},
-				"npmDeps.showPrerelease": {
-					"type": "boolean",
-					"default": false,
-					"description": "%config.showPrerelease.description%"
-				},
-				"npmDeps.cacheTTLMinutes": {
-					"type": "number",
-					"default": 60,
-					"description": "%config.cacheTTLMinutes.description%"
-				},
-				"npmDeps.registryUrl": {
-					"type": "string",
-					"default": "https://registry.npmjs.org",
-					"description": "%config.registryUrl.description%"
-				}
-			}
-		}
-	},
-	"scripts": {
-		"vscode:prepublish": "npm run esbuild-base -- --production",
-		"esbuild-base": "node esbuild.js",
-		"esbuild": "npm run esbuild-base -- --sourcemap",
-		"esbuild-watch": "npm run esbuild-base -- --sourcemap --watch",
-		"compile": "tsc -p ./",
-		"watch": "tsc -watch -p ./",
-		"pretest": "npm run compile && npm run esbuild-base -- --sourcemap",
-		"test": "mocha --require ts-node/register 'src/test/**/*.test.ts'",
-		"lint": "eslint src --ext ts",
-		"publish:vsx": "./publish.sh vsx",
-		"publish:ovsx": "./publish.sh ovsx",
-		"publish:all": "./publish.sh all",
-		"prepare": "husky"
-	},
-	"dependencies": {
-		"jsonc-parser": "^3.2.0",
-		"semver": "^7.5.4"
-	},
-	"devDependencies": {
-		"@types/chai": "^4.3.11",
-		"@types/mocha": "^10.0.6",
-		"@types/node": "^20.10.0",
-		"@types/vscode": "^1.85.0",
-		"@types/semver": "^7.5.6",
-		"@typescript-eslint/eslint-plugin": "^6.13.0",
-		"@typescript-eslint/parser": "^6.13.0",
-		"chai": "^4.3.10",
-		"esbuild": "^0.25.0",
-		"eslint": "^8.54.0",
-		"husky": "^9.1.7",
-		"lint-staged": "^15.4.3",
-		"mocha": "^10.2.0",
-		"ts-node": "^10.9.2",
-		"typescript": "^5.3.2"
-	},
-	"lint-staged": {
-		"*.ts": [
-			"eslint --fix"
-		]
-	}
+  "name": "npm-dependencies-updater",
+  "displayName": "NPM Dependencies Updater",
+  "description": "Smart version management for package.json with one-click updates and breaking change detection",
+  "version": "0.2.0",
+  "publisher": "cookabc",
+  "license": "MIT",
+  "icon": "icon.png",
+  "homepage": "https://github.com/cookabc/npm-dependencies-updater#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cookabc/npm-dependencies-updater"
+  },
+  "bugs": {
+    "url": "https://github.com/cookabc/npm-dependencies-updater/issues"
+  },
+  "galleryBanner": {
+    "color": "#1e1e1e",
+    "theme": "dark"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:json",
+    "onLanguage:jsonc",
+    "workspaceContains:package.json"
+  ],
+  "keywords": [
+    "npm",
+    "node",
+    "dependencies",
+    "package.json",
+    "version",
+    "update",
+    "upgrade",
+    "manager"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "colors": [
+      {
+        "id": "npmDeps.upToDate",
+        "description": "Color for up-to-date packages",
+        "defaults": {
+          "dark": "#4CAF50",
+          "light": "#2E7D32",
+          "highContrast": "#00FF00"
+        }
+      },
+      {
+        "id": "npmDeps.updateAvailable",
+        "description": "Color for packages with updates available",
+        "defaults": {
+          "dark": "#FF9800",
+          "light": "#F57C00",
+          "highContrast": "#FFFF00"
+        }
+      }
+    ],
+    "commands": [
+      {
+        "command": "npmDeps.updateVersion",
+        "title": "%command.updateVersion%"
+      },
+      {
+        "command": "npmDeps.updateAllVersions",
+        "title": "%command.updateAllVersions%"
+      },
+      {
+        "command": "npmDeps.showUpToDate",
+        "title": "%command.showUpToDate%"
+      },
+      {
+        "command": "npmDeps.openOnNpm",
+        "title": "%command.openOnNpm%"
+      }
+    ],
+    "configuration": {
+      "title": "%config.title%",
+      "properties": {
+        "npmDeps.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "%config.enabled.description%"
+        },
+        "npmDeps.showPrerelease": {
+          "type": "boolean",
+          "default": false,
+          "description": "%config.showPrerelease.description%"
+        },
+        "npmDeps.cacheTTLMinutes": {
+          "type": "number",
+          "default": 60,
+          "description": "%config.cacheTTLMinutes.description%"
+        },
+        "npmDeps.registryUrl": {
+          "type": "string",
+          "default": "https://registry.npmjs.org",
+          "description": "%config.registryUrl.description%"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run esbuild-base -- --production",
+    "esbuild-base": "node esbuild.js",
+    "esbuild": "npm run esbuild-base -- --sourcemap",
+    "esbuild-watch": "npm run esbuild-base -- --sourcemap --watch",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run esbuild-base -- --sourcemap",
+    "test": "mocha --require ts-node/register 'src/test/**/*.test.ts'",
+    "format": "biome format --write src",
+    "lint": "biome check --write src",
+    "publish:vsx": "./publish.sh vsx",
+    "publish:ovsx": "./publish.sh ovsx",
+    "publish:all": "./publish.sh all",
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "jsonc-parser": "^3.2.0",
+    "semver": "^7.5.4"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.3.11",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "@types/semver": "^7.5.6",
+    "@biomejs/biome": "^2.0.0",
+    "chai": "^4.3.10",
+    "esbuild": "^0.25.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.4.3",
+    "mocha": "^10.2.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.2"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "npx @biomejs/biome check --write --no-errors-on-unmatched"
+    ]
+  }
 }

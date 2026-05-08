@@ -1,11 +1,15 @@
 import * as vscode from "vscode";
 import { PackageJsonParser } from "../core/packageJsonParser";
-import { VersionService } from "./versionService";
 import { VersionResolver } from "../core/versionResolver";
-import { UpdateRisk, PackageVersionInfo, ParsedDependency } from "../types";
-import { StatusBarManager } from "../utils/statusBar";
+import {
+	PackageVersionInfo,
+	type ParsedDependency,
+	UpdateRisk,
+} from "../types";
 import { t } from "../utils/i18n";
 import { Logger } from "../utils/logger";
+import type { StatusBarManager } from "../utils/statusBar";
+import type { VersionService } from "./versionService";
 
 /**
  * Custom CodeLens that stores dependency and document info for resolution

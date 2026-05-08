@@ -1,4 +1,4 @@
-import { PackageVersionInfo } from "../types";
+import type { PackageVersionInfo } from "../types";
 
 export interface IMemento {
 	get<T>(key: string): T | undefined;

@@ -1,5 +1,5 @@
 import { parseTree } from "jsonc-parser";
-import { ParsedDependency } from "../types";
+import type { ParsedDependency } from "../types";
 
 export class PackageJsonParser {
 	public parse(text: string): ParsedDependency[] {

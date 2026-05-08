@@ -1,8 +1,8 @@
-import * as vscode from "vscode";
-import { NpmClient } from "./npmClient";
+import type * as vscode from "vscode";
 import { PackageCache } from "../core/cache";
-import { PackageVersionInfo } from "../types";
+import type { PackageVersionInfo } from "../types";
 import { Logger } from "../utils/logger";
+import { NpmClient } from "./npmClient";
 
 export class VersionService {
 	private client: NpmClient;

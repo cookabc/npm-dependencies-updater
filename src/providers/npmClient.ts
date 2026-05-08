@@ -1,4 +1,4 @@
-import { NpmClientResult } from "../types";
+import type { NpmClientResult } from "../types";
 
 export class NpmClient {
 	private registryUrl: string;
