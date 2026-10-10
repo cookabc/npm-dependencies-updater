@@ -2,8 +2,8 @@
 
 Smart version management for `package.json` with one-click updates and breaking change detection.
 
-[![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/cookabc.npm-dependencies-updater)](https://marketplace.visualstudio.com/items?itemName=cookabc.npm-dependencies-updater)
-[![Visual Studio Marketplace Downloads](https://img.shields.io/visual-studio-marketplace/d/cookabc.npm-dependencies-updater)](https://marketplace.visualstudio.com/items?itemName=cookabc.npm-dependencies-updater)
+[![Marketplace Version](https://vsmarketplacebadges.dev/version/cookabc.npm-dependencies-updater.svg)](https://marketplace.visualstudio.com/items?itemName=cookabc.npm-dependencies-updater)
+[![Downloads](https://vsmarketplacebadges.dev/downloads-short/cookabc.npm-dependencies-updater.svg)](https://marketplace.visualstudio.com/items?itemName=cookabc.npm-dependencies-updater)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## ✨ Features
