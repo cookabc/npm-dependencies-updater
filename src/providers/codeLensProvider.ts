@@ -120,6 +120,9 @@ export class NpmCodeLensProvider implements vscode.CodeLensProvider {
 		} else {
 			this.statusBar.update(totalUpdates, hasRiskyUpdates);
 		}
+		if (dependencies.length > 0) {
+			this.statusBar.showNow();
+		}
 
 		return lenses;
 	}
@@ -136,6 +139,18 @@ export class NpmCodeLensProvider implements vscode.CodeLensProvider {
 		const uri = codeLens.documentUri;
 
 		const info = this.versionService.getCachedPackageInfo(dep.name);
+
+		if (!info && this.versionService.getFailure(dep.name)) {
+			// A recent fetch failed; show it and let the user retry instead of
+			// spinning (and re-requesting) on every resolve
+			codeLens.command = {
+				title: `$(error) ${t("checkFailed")}`,
+				tooltip: `${this.versionService.getFailure(dep.name)} — ${t("retryCheck")}`,
+				command: "npmDeps.retryFetch",
+				arguments: [dep.name],
+			};
+			return codeLens;
+		}
 
 		if (info) {
 			const isUpdateAvailable = VersionResolver.isUpdateAvailable(
@@ -174,6 +189,7 @@ export class NpmCodeLensProvider implements vscode.CodeLensProvider {
 					arguments: [
 						uri,
 						versionRange,
+						dep.name,
 						dep.currentVersion,
 						info.latestVersion,
 					],

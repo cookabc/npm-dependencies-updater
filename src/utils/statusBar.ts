@@ -11,6 +11,10 @@ export class StatusBarManager {
 		);
 		this.statusBarItem.command = "npmDeps.updateAllVersions";
 		this.reset();
+	}
+
+	/** Visible once a package.json with dependencies has been analysed */
+	public showNow() {
 		this.statusBarItem.show();
 	}
 
@@ -18,6 +22,7 @@ export class StatusBarManager {
 		this.statusBarItem.text = `$(sync~spin) ${t("checkingDeps")}`;
 		this.statusBarItem.backgroundColor = undefined;
 		this.statusBarItem.tooltip = t("scanning");
+		this.statusBarItem.show();
 	}
 
 	public update(updateCount: number, hasRiskyUpdates: boolean) {
@@ -25,6 +30,7 @@ export class StatusBarManager {
 			this.statusBarItem.text = `$(check) ${t("upToDate")}`;
 			this.statusBarItem.backgroundColor = undefined;
 			this.statusBarItem.tooltip = t("allUpToDate");
+			this.statusBarItem.show();
 		} else {
 			this.statusBarItem.text = `$(warning) ${updateCount} ${t("updatesAvailable")}`;
 			this.statusBarItem.backgroundColor = new vscode.ThemeColor(
@@ -32,7 +38,8 @@ export class StatusBarManager {
 			);
 
 			const riskyText = hasRiskyUpdates ? t("includesMajor") : "";
-			this.statusBarItem.tooltip = `${t("clickToUpdate")} ${updateCount} packages${riskyText}`;
+			this.statusBarItem.tooltip = `${t("clickToUpdate")} ${t("updatesTooltip", updateCount)}${riskyText}`;
+			this.statusBarItem.show();
 		}
 	}
 

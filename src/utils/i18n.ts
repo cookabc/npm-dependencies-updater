@@ -13,6 +13,8 @@ interface Messages {
 	updatesAvailable: string;
 	includesMajor: string;
 	clickToUpdate: string;
+	updatesTooltip: string;
+	retryCheck: string;
 	npmDeps: string;
 	checkFailed: string;
 	majorUpdate: string;
@@ -42,6 +44,8 @@ const messages: Record<string, Messages> = {
 		updatesAvailable: "updates available",
 		includesMajor: " (Includes major updates)",
 		clickToUpdate: "Click to update",
+		updatesTooltip: "{0} packages with updates",
+		retryCheck: "Click to retry",
 		npmDeps: "NPM Dependencies",
 		checkFailed: "Check failed",
 		majorUpdate: "Major Update",
@@ -70,6 +74,8 @@ const messages: Record<string, Messages> = {
 		updatesAvailable: "个可用的更新",
 		includesMajor: " (包含重大更新)",
 		clickToUpdate: "点击更新",
+		updatesTooltip: "{0} 个包有更新",
+		retryCheck: "点击重试",
 		npmDeps: "NPM 依赖项",
 		checkFailed: "检查失败",
 		majorUpdate: "重大更新",
@@ -97,6 +103,8 @@ const messages: Record<string, Messages> = {
 		updatesAvailable: "個可用的更新",
 		includesMajor: " (包含重大更新)",
 		clickToUpdate: "點擊更新",
+		updatesTooltip: "{0} 個套件有更新",
+		retryCheck: "點擊重試",
 		npmDeps: "NPM 依賴項",
 		checkFailed: "檢查失敗",
 		majorUpdate: "重大更新",
@@ -124,6 +132,8 @@ const messages: Record<string, Messages> = {
 		updatesAvailable: "件の更新があります",
 		includesMajor: " (メジャー更新を含む)",
 		clickToUpdate: "クリックして更新",
+		updatesTooltip: "{0} パッケージに更新があります",
+		retryCheck: "クリックして再試行",
 		npmDeps: "NPM 依存関係",
 		checkFailed: "確認失敗",
 		majorUpdate: "メジャー更新",
@@ -152,6 +162,8 @@ const messages: Record<string, Messages> = {
 		updatesAvailable: "개 업데이트 가능",
 		includesMajor: " (주요 업데이트 포함)",
 		clickToUpdate: "클릭하여 업데이트",
+		updatesTooltip: "{0}개 패키지에 업데이트 있음",
+		retryCheck: "클릭하여 재시도",
 		npmDeps: "NPM 의존성",
 		checkFailed: "확인 실패",
 		majorUpdate: "주요 업데이트",
@@ -180,6 +192,8 @@ const messages: Record<string, Messages> = {
 		updatesAvailable: "mises à jour disponibles",
 		includesMajor: " (Inclut des mises à jour majeures)",
 		clickToUpdate: "Cliquer pour mettre à jour",
+		updatesTooltip: "{0} paquets avec des mises à jour",
+		retryCheck: "Cliquez pour réessayer",
 		npmDeps: "Dépendances NPM",
 		checkFailed: "Échec de la vérification",
 		majorUpdate: "Mise à jour majeure",
@@ -208,6 +222,8 @@ const messages: Record<string, Messages> = {
 		updatesAvailable: "Updates verfügbar",
 		includesMajor: " (Enthält Hauptversions-Updates)",
 		clickToUpdate: "Klicken zum Aktualisieren",
+		updatesTooltip: "{0} Pakete mit Updates",
+		retryCheck: "Klicken zum Wiederholen",
 		npmDeps: "NPM-Abhängigkeiten",
 		checkFailed: "Prüfung fehlgeschlagen",
 		majorUpdate: "Hauptversions-Update",
@@ -236,6 +252,8 @@ const messages: Record<string, Messages> = {
 		updatesAvailable: "aggiornamenti disponibili",
 		includesMajor: " (Include aggiornamenti importanti)",
 		clickToUpdate: "Clicca per aggiornare",
+		updatesTooltip: "{0} pacchetti con aggiornamenti",
+		retryCheck: "Clicca per riprovare",
 		npmDeps: "Dipendenze NPM",
 		checkFailed: "Verifica fallita",
 		majorUpdate: "Aggiornamento importante",
@@ -264,6 +282,8 @@ const messages: Record<string, Messages> = {
 		updatesAvailable: "actualizaciones disponibles",
 		includesMajor: " (Incluye actualizaciones importantes)",
 		clickToUpdate: "Clic para actualizar",
+		updatesTooltip: "{0} paquetes con actualizaciones",
+		retryCheck: "Haga clic para reintentar",
 		npmDeps: "Dependencias NPM",
 		checkFailed: "Verificación fallida",
 		majorUpdate: "Actualización importante",
@@ -292,6 +312,8 @@ const messages: Record<string, Messages> = {
 		updatesAvailable: "обновлений доступно",
 		includesMajor: " (Включает мажорные обновления)",
 		clickToUpdate: "Нажмите для обновления",
+		updatesTooltip: "{0} пакетов с обновлениями",
+		retryCheck: "Нажмите для повтора",
 		npmDeps: "Зависимости NPM",
 		checkFailed: "Ошибка проверки",
 		majorUpdate: "Мажорное обновление",

@@ -44,19 +44,28 @@ export class NpmHoverProvider implements vscode.HoverProvider {
 		Logger.log(`Providing hover for ${dep.name}`);
 		const info = await this.versionService.getPackageInfo(dep.name);
 		if (!info) {
-			return new vscode.Hover(`${t("checking")} ${dep.name}...`);
+			// A fresh failure means a retry is pointless right now; an
+			// uncached package is still being fetched
+			return this.versionService.getFailure(dep.name)
+				? undefined
+				: new vscode.Hover(`${t("checking")} ${dep.name}...`);
 		}
+
+		// description/homepage only exist in the full registry document
+		const details = await this.versionService.getPackageDetails(dep.name);
+		const summary = details?.description ?? info.summary;
+		const homepage = details?.homepage ?? info.homepage;
 
 		const md = new vscode.MarkdownString();
 		md.appendMarkdown(`**${info.name}**\n\n`);
-		if (info.summary) {
-			md.appendMarkdown(`${info.summary}\n\n`);
+		if (summary) {
+			md.appendMarkdown(`${summary}\n\n`);
 		}
 		md.appendMarkdown(`${t("latest")}: **${info.latestVersion}**\n`);
 		md.appendMarkdown(`Current: **${dep.currentVersion}**\n\n`);
 
-		if (info.homepage) {
-			md.appendMarkdown(`[Homepage](${info.homepage})`);
+		if (homepage) {
+			md.appendMarkdown(`[Homepage](${homepage})`);
 		}
 
 		return new vscode.Hover(md);

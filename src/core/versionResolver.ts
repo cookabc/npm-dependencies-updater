@@ -69,10 +69,50 @@ export class VersionResolver {
 		currentVersionStr: string,
 		newVersionStr: string,
 	): string {
-		// Preserve prefix (like ^, ~, >=)
-		const prefixMatch = currentVersionStr.match(/^([^\d]*)/);
-		const prefix = prefixMatch ? prefixMatch[1] : "";
+		const range = currentVersionStr.trim();
 
-		return `${prefix}${newVersionStr}`;
+		// OR alternatives ("^1.0.0 || ^2.0.0"): bump the first alternative,
+		// leave the rest untouched
+		if (range.includes("||")) {
+			const [first, ...rest] = range.split("||");
+			return [
+				VersionResolver.bumpSimpleRange(first.trim(), newVersionStr),
+				...rest.map((s) => s.trim()),
+			].join(" || ");
+		}
+
+		return VersionResolver.bumpSimpleRange(range, newVersionStr);
+	}
+
+	/**
+	 * Bump the lower-bound part of a simple (AND-only) range, keeping any
+	 * upper bounds: ">=1.2 <2.0" + 1.4.0 -> ">=1.4.0 <2.0"
+	 */
+	private static bumpSimpleRange(range: string, newVersionStr: string): string {
+		const parts = range.split(/[\s,]+/).filter(Boolean);
+
+		if (parts.length <= 1) {
+			const prefixMatch = range.match(/^([^\d]*)/);
+			const prefix = prefixMatch ? prefixMatch[1] : "";
+			return `${prefix}${newVersionStr}`;
+		}
+
+		let replaced = false;
+		const bumped = parts.map((part) => {
+			if (replaced) {
+				return part;
+			}
+			// A lower bound is a bare version or prefixed with > >= ^ ~ =;
+			// upper bounds start with < and must be kept
+			if (!part.startsWith("<")) {
+				const prefixMatch = part.match(/^([^\d]*)/);
+				replaced = true;
+				return `${prefixMatch ? prefixMatch[1] : ""}${newVersionStr}`;
+			}
+			return part;
+		});
+
+		// Pure upper bounds ("*" handling aside) — nothing safe to bump
+		return replaced ? bumped.join(" ") : range;
 	}
 }

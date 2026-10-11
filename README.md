@@ -5,6 +5,7 @@ Smart version management for `package.json` with one-click updates and breaking 
 [![Marketplace Version](https://vsmarketplacebadges.dev/version/cookabc.npm-dependencies-updater.svg)](https://marketplace.visualstudio.com/items?itemName=cookabc.npm-dependencies-updater)
 [![Downloads](https://vsmarketplacebadges.dev/downloads-short/cookabc.npm-dependencies-updater.svg)](https://marketplace.visualstudio.com/items?itemName=cookabc.npm-dependencies-updater)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CI](https://github.com/cookabc/npm-dependencies-updater/actions/workflows/ci.yml/badge.svg)](https://github.com/cookabc/npm-dependencies-updater/actions/workflows/ci.yml)
 
 ## ✨ Features
 
@@ -13,7 +14,9 @@ Smart version management for `package.json` with one-click updates and breaking 
 - 🖱️ **One-Click Updates** - Click on CodeLens hints to update your dependencies instantly.
 - ⚠️ **Safety Confirmation** - Intelligent modal dialogs when performing batch updates to handle major version risks.
 - 📊 **Status Bar Integration** - Real-time summary of available updates in your VS Code status bar.
-- 🌍 **Multi-language Support** - Full support for English and Chinese.
+- 🌍 **Multi-language Support** - Interface localized into 10 languages.
+- 🔒 **peerDependencies Aware** - Peer ranges are shown but excluded from "Update All", since they express host compatibility windows.
+- 🔁 **Resilient Checks** - Failed lookups are cached briefly and retried on demand instead of hammering the registry.
 - 💾 **Smart Caching** - Efficiently caches NPM registry data to ensure a smooth, non-blocking experience.
 - 🔗 **NPM Integration** - Quick links to view package details on npmjs.com.
 
@@ -39,14 +42,15 @@ code --install-extension cookabc.npm-dependencies-updater
    - `$(arrow-up) Update to X.X.X` - Safe update available (click to update).
    - `$(warning) Update to X.X.X Major` - Major version update (use caution).
 3. Use the Status Bar summary to see an overview of your project's health.
-4. Click "Update All" in the status bar or command palette to batch update safe packages.
+4. Click "Update All" in the status bar or command palette to batch update safe packages (peerDependencies are skipped).
+5. If a check fails, the CodeLens shows the error — click it to retry.
 
 ## ⚙️ Configuration
 
 | Setting                   | Default                      | Description                  |
 | ------------------------- | ---------------------------- | ---------------------------- |
 | `npmDeps.enabled`         | `true`                       | Enable/disable the extension |
-| `npmDeps.showPrerelease`  | `false`                      | Include pre-release versions |
+| `npmDeps.showPrerelease`  | `false`                      | Include pre-release versions when picking the latest |
 | `npmDeps.cacheTTLMinutes` | `60`                         | Cache TTL in minutes         |
 | `npmDeps.registryUrl`     | `https://registry.npmjs.org` | Custom NPM registry URL      |
 
@@ -63,6 +67,8 @@ src/
 │   ├── npmClient.ts       # NPM API client
 │   └── versionService.ts  # Version service
 ├── utils/          # Utility functions
+│   ├── i18n.ts           # Internationalization
+│   ├── logger.ts         # Output channel logging
 │   └── statusBar.ts      # Status bar management
 ├── types/          # Type definitions
 │   └── index.ts

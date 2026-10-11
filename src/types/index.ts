@@ -7,6 +7,9 @@ export interface ParsedDependency {
 	name: string;
 	currentVersion: string;
 	isDev: boolean;
+	// peerDependencies express host compatibility windows; "Update All"
+	// deliberately skips them
+	isPeer?: boolean;
 	// Offsets for the key (name) - useful for CodeLens location
 	nameRange: DependencyOffsets;
 	// Offsets for the value (version) - useful for replacement
@@ -16,8 +19,16 @@ export interface ParsedDependency {
 export interface PackageVersionInfo {
 	name: string;
 	latestVersion: string;
-	publishedDate?: string;
 	summary?: string;
+	homepage?: string;
+}
+
+/**
+ * Enrichment data only present in the full registry document (the abbreviated
+ * corgi response carries neither description nor homepage)
+ */
+export interface PackageDetails {
+	description?: string;
 	homepage?: string;
 }
 

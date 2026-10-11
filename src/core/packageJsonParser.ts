@@ -10,7 +10,11 @@ export class PackageJsonParser {
 			return dependencies;
 		}
 
-		const processSection = (sectionName: string, isDev: boolean) => {
+		const processSection = (
+			sectionName: string,
+			isDev: boolean,
+			isPeer: boolean = false,
+		) => {
 			const section = tree.children?.find(
 				(c) => c.children?.[0].value === sectionName,
 			);
@@ -46,6 +50,7 @@ export class PackageJsonParser {
 					name,
 					currentVersion,
 					isDev,
+					isPeer,
 					nameRange: {
 						start: keyNode.offset,
 						end: keyNode.offset + keyNode.length,
@@ -60,7 +65,7 @@ export class PackageJsonParser {
 
 		processSection("dependencies", false);
 		processSection("devDependencies", true);
-		processSection("peerDependencies", false);
+		processSection("peerDependencies", false, true);
 		processSection("optionalDependencies", false);
 
 		return dependencies;
