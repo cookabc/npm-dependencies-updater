@@ -88,7 +88,17 @@ npm run compile
 npm test
 ```
 
-## � Publishing
+## 🚀 Publishing
+
+Automated: pushing a version tag runs tests, publishes to both marketplaces
+and attaches the VSIX to a GitHub Release (needs the repository secrets
+`VSCE_PAT` and `OVSX_PAT`):
+
+```bash
+git tag v<package.json version> && git push origin v<package.json version>
+```
+
+Manual local publish (reads `.env` with `VSCE_PAT` / `OVSX_PAT`):
 
 ```bash
 # Publish to both VS Code Marketplace and OpenVSX
