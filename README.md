@@ -91,8 +91,10 @@ npm test
 ## 🚀 Publishing
 
 Automated: pushing a version tag runs tests, publishes to both marketplaces
-and attaches the VSIX to a GitHub Release (needs the repository secrets
-`VSCE_PAT` and `OVSX_PAT`):
+and attaches the VSIX to a GitHub Release. Publishing uses OIDC trusted
+publishing — register the repository + workflow once on each marketplace
+(no token stored as a secret); `VSCE_PAT` / `OVSX_PAT` secrets still work
+as a fallback:
 
 ```bash
 git tag v<package.json version> && git push origin v<package.json version>
