@@ -118,7 +118,7 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run esbuild-base -- --sourcemap",
-    "test": "mocha --require ts-node/register 'src/test/**/*.test.ts'",
+    "test": "mocha 'out/test/unit/**/*.test.js'",
     "format": "biome format --write src",
     "lint": "biome check --write src",
     "publish:vsx": "./publish.sh vsx",
@@ -133,19 +133,18 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
-    "@types/chai": "^4.3.20",
+    "@types/chai": "^5.2.3",
     "@types/mocha": "^10.0.10",
     "@types/node": "^20.19.43",
     "@types/semver": "^7.8.0",
     "@types/vscode": "^1.140.0",
     "@vscode/test-electron": "^3.1.0",
-    "chai": "^4.5.0",
-    "esbuild": "^0.25.12",
+    "chai": "^6.3.0",
+    "esbuild": "^0.28.2",
     "husky": "^9.1.7",
-    "lint-staged": "^15.5.2",
-    "mocha": "^10.8.2",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "lint-staged": "^17.6.0",
+    "mocha": "^12.0.3",
+    "typescript": "^7.0.2"
   },
   "lint-staged": {
     "*.ts": [
