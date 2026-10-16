@@ -135,7 +135,7 @@
     "@biomejs/biome": "^2.5.15",
     "@types/chai": "^5.2.3",
     "@types/mocha": "^10.0.10",
-    "@types/node": "^20.19.43",
+    "@types/node": "^26.6.5",
     "@types/semver": "^7.8.0",
     "@types/vscode": "^1.140.0",
     "@vscode/test-electron": "^3.1.0",
@@ -150,5 +150,8 @@
     "*.ts": [
       "npx @biomejs/biome check --write --no-errors-on-unmatched"
     ]
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
   }
 }
