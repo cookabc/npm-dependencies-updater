@@ -9,7 +9,9 @@ import { PackageJsonParser } from "../../core/packageJsonParser";
 import { VersionService } from "../../providers/versionService";
 
 const NPM = process.env.UAT_NPM ?? "http://127.0.0.1:0";
-const FIXTURE = path.resolve(__dirname, "../../../scripts/uat-fixture");
+const FIXTURE =
+	process.env.UAT_FIXTURE ??
+	path.resolve(__dirname, "../../../scripts/uat-fixture");
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const parser = new PackageJsonParser();
