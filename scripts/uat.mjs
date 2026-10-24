@@ -12,12 +12,17 @@
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
 import { fileURLToPath } from "node:url";
 import { runTests } from "@vscode/test-electron";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(here, "..");
-const fixture = path.join(here, "uat-fixture");
+// 隔离测试输入与短路径配置目录，避免修改仓库样例或超出 socket 路径限制。
+const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), "vsc-uat-"));
+const fixture = path.join(sandbox, "workspace");
+const profile = path.join(sandbox, "profile");
+fs.cpSync(path.join(here, "uat-fixture"), fixture, { recursive: true });
 
 const corgi = (latest, versions) => ({
 	name: "x",
@@ -96,8 +101,8 @@ try {
 	await runTests({
 		extensionDevelopmentPath: root,
 		extensionTestsPath: path.join(root, "out", "test", "uat", "suite.js"),
-		launchArgs: [fixture, "--disable-extensions", "--disable-gpu"],
-		extensionTestsEnv: { UAT_NPM: `http://127.0.0.1:${port}` },
+		launchArgs: [fixture, "--disable-extensions", "--disable-gpu", `--user-data-dir=${profile}`],
+		extensionTestsEnv: { UAT_FIXTURE: fixture, UAT_NPM: `http://127.0.0.1:${port}` },
 	});
 	console.log("UAT PASSED");
 } catch (err) {
@@ -105,4 +110,5 @@ try {
 	process.exitCode = 1;
 } finally {
 	server.close();
+	fs.rmSync(sandbox, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
 }
