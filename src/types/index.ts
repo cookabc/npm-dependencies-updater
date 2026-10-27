@@ -5,6 +5,11 @@ export interface DependencyOffsets {
 
 export interface ParsedDependency {
 	name: string;
+	/**
+	 * Package to query on the registry. Equals `name` except for `npm:` aliases,
+	 * where it is the aliased package (`npm:lodash@^4.17.0` → `lodash`).
+	 */
+	registryName: string;
 	currentVersion: string;
 	isDev: boolean;
 	// peerDependencies express host compatibility windows; "Update All"

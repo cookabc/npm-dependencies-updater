@@ -28,7 +28,7 @@ This is a **VS Code Extension** that provides smart version management for `pack
 - `eslint` (^8.54.0) with `@typescript-eslint/*` plugins
 - `mocha` (^10.2.0) + `chai` (^4.3.10) - Unit testing
 - `ts-node` (^10.9.2) - TypeScript execution for tests
-- `@types/vscode` (^1.85.0) - VS Code API types
+- `@types/vscode` (1.85.0, pinned) - VS Code API types. The types minor must not exceed the `engines.vscode` minor (`^1.85.0`). A newer minor fails `vsce package`, and a `^` range drifts back to a newer minor on install.
 
 ## Build and Development Commands
 

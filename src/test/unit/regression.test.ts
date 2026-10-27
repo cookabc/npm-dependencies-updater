@@ -22,10 +22,14 @@ describe("Regression: compound range formatting", () => {
 		);
 	});
 
-	it("bumps only the first OR alternative", () => {
+	it("bumps the OR alternative that already contains the target", () => {
 		assert.strictEqual(
 			VersionResolver.formatNewVersion("^1.0.0 || ^2.0.0", "1.4.0"),
 			"^1.4.0 || ^2.0.0",
+		);
+		assert.strictEqual(
+			VersionResolver.formatNewVersion("^1.0.0 || ^2.0.0", "2.3.0"),
+			"^1.0.0 || ^2.3.0",
 		);
 	});
 
@@ -42,9 +46,12 @@ describe("Regression: compound range formatting", () => {
 			VersionResolver.formatNewVersion("1.2.3", "1.4.0"),
 			"1.4.0",
 		);
+	});
+
+	it("does not rewrite workspace specs", () => {
 		assert.strictEqual(
 			VersionResolver.formatNewVersion("workspace:^1.2.3", "1.4.0"),
-			"workspace:^1.4.0",
+			null,
 		);
 	});
 });
