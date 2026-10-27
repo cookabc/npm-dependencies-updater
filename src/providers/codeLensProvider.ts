@@ -1,11 +1,7 @@
 import * as vscode from "vscode";
 import { PackageJsonParser } from "../core/packageJsonParser";
 import { VersionResolver } from "../core/versionResolver";
-import {
-	PackageVersionInfo,
-	type ParsedDependency,
-	UpdateRisk,
-} from "../types";
+import { type ParsedDependency, UpdateRisk } from "../types";
 import { t } from "../utils/i18n";
 import { Logger } from "../utils/logger";
 import type { StatusBarManager } from "../utils/statusBar";
@@ -81,7 +77,7 @@ export class NpmCodeLensProvider implements vscode.CodeLensProvider {
 			const endPos = document.positionAt(dep.nameRange.end);
 			const range = new vscode.Range(startPos, endPos);
 
-			const info = this.versionService.getCachedPackageInfo(dep.name);
+			const info = this.versionService.getCachedPackageInfo(dep.registryName);
 			if (info) {
 				const isUpdateAvailable = VersionResolver.isUpdateAvailable(
 					dep.currentVersion,
@@ -110,7 +106,7 @@ export class NpmCodeLensProvider implements vscode.CodeLensProvider {
 					title: "$(link-external) NPM",
 					tooltip: t("npmDeps"),
 					command: "npmDeps.openOnNpm",
-					arguments: [dep.name],
+					arguments: [dep.registryName],
 				}),
 			);
 		}
@@ -138,16 +134,16 @@ export class NpmCodeLensProvider implements vscode.CodeLensProvider {
 		const dep = codeLens.dependency;
 		const uri = codeLens.documentUri;
 
-		const info = this.versionService.getCachedPackageInfo(dep.name);
+		const info = this.versionService.getCachedPackageInfo(dep.registryName);
 
-		if (!info && this.versionService.getFailure(dep.name)) {
+		if (!info && this.versionService.getFailure(dep.registryName)) {
 			// A recent fetch failed; show it and let the user retry instead of
 			// spinning (and re-requesting) on every resolve
 			codeLens.command = {
 				title: `$(error) ${t("checkFailed")}`,
-				tooltip: `${this.versionService.getFailure(dep.name)} — ${t("retryCheck")}`,
+				tooltip: `${this.versionService.getFailure(dep.registryName)} — ${t("retryCheck")}`,
 				command: "npmDeps.retryFetch",
-				arguments: [dep.name],
+				arguments: [dep.registryName],
 			};
 			return codeLens;
 		}
@@ -194,6 +190,17 @@ export class NpmCodeLensProvider implements vscode.CodeLensProvider {
 						info.latestVersion,
 					],
 				};
+			} else if (
+				!VersionResolver.specIncludes(dep.currentVersion, info.latestVersion)
+			) {
+				// Latest sits outside a range we cannot safely rewrite. Show it,
+				// but do not offer a one-click upgrade that would write a broken spec.
+				codeLens.command = {
+					title: `$(info) ${t("latest")} ${info.latestVersion}`,
+					tooltip: `${t("latest")}: ${info.latestVersion}`,
+					command: "npmDeps.openOnNpm",
+					arguments: [dep.registryName],
+				};
 			} else {
 				codeLens.command = {
 					title: `$(check-all) ${t("upToDate")}`,
@@ -209,8 +216,8 @@ export class NpmCodeLensProvider implements vscode.CodeLensProvider {
 				tooltip: t("scanning"),
 			};
 
-			if (!this.pendingFetches.has(dep.name)) {
-				this.fetchVersionInBackground(dep.name);
+			if (!this.pendingFetches.has(dep.registryName)) {
+				this.fetchVersionInBackground(dep.registryName);
 			}
 		}
 

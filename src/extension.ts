@@ -136,6 +136,9 @@ export function activate(context: vscode.ExtensionContext) {
 					currentVersion,
 					newVersion,
 				);
+				if (!formattedVersion) {
+					return;
+				}
 
 				const risk = VersionResolver.calculateUpdateRisk(
 					currentVersion,
@@ -255,7 +258,9 @@ export function activate(context: vscode.ExtensionContext) {
 					const results = await Promise.allSettled(
 						updatable.map(async (dep) => {
 							if (token.isCancellationRequested) return null;
-							const info = await versionService.getPackageInfo(dep.name);
+							const info = await versionService.getPackageInfo(
+								dep.registryName,
+							);
 							completed++;
 							progress.report({
 								message: `${t("checking")} (${completed}/${updatable.length})`,
@@ -357,6 +362,9 @@ export function activate(context: vscode.ExtensionContext) {
 					dep.currentVersion,
 					info.latestVersion,
 				);
+				if (!formattedVersion) {
+					continue;
+				}
 
 				let target = dep;
 				if (currentDeps !== dependencies) {

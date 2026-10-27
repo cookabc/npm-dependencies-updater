@@ -1,5 +1,6 @@
 import { parseTree } from "jsonc-parser";
 import type { ParsedDependency } from "../types";
+import { registryDependency } from "./dependencySpec";
 
 export class PackageJsonParser {
 	public parse(text: string): ParsedDependency[] {
@@ -46,8 +47,18 @@ export class PackageJsonParser {
 				const name = keyNode.value;
 				const currentVersion = valueNode.value;
 
+				// workspace/file/link/git/url/dist-tag specs are not registry
+				// ranges. Looking them up would leak private package names and
+				// semver.coerce would rewrite the spec around a stray number.
+				// npm: aliases resolve to the aliased package instead.
+				const target = registryDependency(name, currentVersion);
+				if (!target) {
+					continue;
+				}
+
 				dependencies.push({
 					name,
+					registryName: target.registryName,
 					currentVersion,
 					isDev,
 					isPeer,
