@@ -82,6 +82,10 @@
             {
                 "command": "npmDeps.retryFetch",
                 "title": "Retry Version Check"
+            },
+            {
+                "command": "npmDeps.setRegistryToken",
+                "title": "Set Registry Auth Token"
             }
         ],
         "configuration": {

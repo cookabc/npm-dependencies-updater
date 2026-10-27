@@ -1,5 +1,11 @@
-import type * as vscode from "vscode";
-import { PackageCache } from "../core/cache";
+import { type IMemento, PackageCache } from "../core/cache";
+import {
+	DEFAULT_REGISTRY,
+	normalizeRegistryUrl,
+	registryForPackage,
+	tokenSecretKey,
+	versionCacheKey,
+} from "../core/registryConfig";
 import type { PackageDetails, PackageVersionInfo } from "../types";
 import { Logger } from "../utils/logger";
 import { NpmClient } from "./npmClient";
@@ -19,90 +25,134 @@ interface DetailsEntry {
 	timestamp: number;
 }
 
+/** The subset of VS Code SecretStorage this service needs. */
+export interface RegistrySecretStore {
+	get(key: string): Thenable<string | undefined>;
+}
+
+export interface VersionServiceOptions {
+	scopedRegistries?: ReadonlyMap<string, string>;
+	secrets?: RegistrySecretStore;
+	requestTimeoutMs?: number;
+}
+
 export class VersionService {
-	private client: NpmClient;
 	private cache: PackageCache;
 	private showPrerelease: boolean;
-	private registryHost: string;
-	// Negative cache: packages that recently failed to fetch, so scrolling or
-	// hovering over a missing package does not hammer the registry
+	private defaultRegistry: string | null;
+	private scopedRegistries: Map<string, string>;
+	private secrets?: RegistrySecretStore;
+	private readonly requestTimeoutMs: number;
+	private clients: Map<string, NpmClient> = new Map();
+	// Negative cache, keyed like the version cache (registry + pre-release +
+	// name) so a failure on one registry does not suppress another.
 	private failures: Map<string, FailureEntry> = new Map();
 	private details: Map<string, DetailsEntry> = new Map();
 
 	constructor(
-		cacheTTLMinutes: number = 60,
+		cacheTTLMinutes = 60,
 		registryUrl?: string,
-		memento?: vscode.Memento,
-		showPrerelease: boolean = false,
+		memento?: IMemento,
+		showPrerelease = false,
+		options?: VersionServiceOptions,
 	) {
-		this.client = new NpmClient(registryUrl);
 		this.cache = new PackageCache(cacheTTLMinutes, memento);
 		this.showPrerelease = showPrerelease;
-		this.registryHost = VersionService.hostOf(registryUrl);
+		this.defaultRegistry =
+			registryUrl === undefined
+				? DEFAULT_REGISTRY
+				: normalizeRegistryUrl(registryUrl);
+		this.scopedRegistries = new Map(options?.scopedRegistries ?? []);
+		this.secrets = options?.secrets;
+		this.requestTimeoutMs = options?.requestTimeoutMs ?? 10_000;
 	}
 
-	private static hostOf(registryUrl?: string): string {
-		if (!registryUrl) {
-			return "registry.npmjs.org";
-		}
-		try {
-			return new URL(registryUrl).host;
-		} catch {
-			return registryUrl;
-		}
+	/** Registry that will be queried for this package, or null when none is usable. */
+	public registryFor(packageName: string): string | null {
+		return registryForPackage(
+			packageName,
+			this.defaultRegistry,
+			this.scopedRegistries,
+		);
 	}
 
-	// Cache keys include the registry host so that switching registries cannot
-	// serve data fetched from the previous one
-	private key(packageName: string): string {
-		return `${this.registryHost}:${packageName}`;
+	public setScopedRegistries(scopes: ReadonlyMap<string, string>): void {
+		this.scopedRegistries = new Map(scopes);
+		this.clients.clear();
+	}
+
+	public setSecrets(secrets: RegistrySecretStore): void {
+		this.secrets = secrets;
+		this.clients.clear();
+	}
+
+	/** Drop cached clients and failures after a token is saved or removed. */
+	public invalidateCredentials(): void {
+		this.clients.clear();
+		this.failures.clear();
 	}
 
 	public getCachedPackageInfo(
 		packageName: string,
 	): PackageVersionInfo | undefined {
-		return this.cache.get(this.key(packageName));
+		const key = this.cacheKeyFor(packageName);
+		if (!key) {
+			return undefined;
+		}
+		return this.cache.get(key);
 	}
 
 	/** Error message if the package failed to fetch recently, else undefined */
 	public getFailure(packageName: string): string | undefined {
-		const entry = this.failures.get(packageName);
+		const key = this.failureKey(packageName);
+		const entry = this.failures.get(key);
 		if (!entry) {
 			return undefined;
 		}
 		if (Date.now() - entry.timestamp > FAILURE_TTL_MS) {
-			this.failures.delete(packageName);
+			this.failures.delete(key);
 			return undefined;
 		}
 		return entry.message;
 	}
 
 	public clearFailure(packageName: string): void {
-		this.failures.delete(packageName);
+		this.failures.delete(this.failureKey(packageName));
 	}
 
 	public async getPackageInfo(
 		packageName: string,
 	): Promise<PackageVersionInfo | null> {
-		const cached = this.cache.get(this.key(packageName));
-		if (cached) {
-			this.failures.delete(packageName);
-			return cached;
+		const key = this.cacheKeyFor(packageName);
+		if (!key) {
+			this.rememberFailure(packageName, "Invalid registry URL");
+			return null;
 		}
 
-		// A recent failure suppresses new attempts until its TTL runs out
+		const cached = this.cache.get(key);
+		if (cached) {
+			this.failures.delete(key);
+			return cached;
+		}
 		if (this.getFailure(packageName)) {
 			return null;
 		}
 
+		const registry = this.registryFor(packageName);
+		const client = registry ? await this.clientFor(registry) : null;
+		if (!registry || !client) {
+			this.rememberFailure(packageName, "Invalid registry URL");
+			return null;
+		}
+
 		Logger.log(`Fetching info for ${packageName}`);
-		const result = await this.client.fetchPackageInfo(
+		const result = await client.fetchPackageInfo(
 			packageName,
 			this.showPrerelease,
 		);
 		if (result.exists && result.package.latestVersion) {
-			this.cache.set(this.key(packageName), result.package);
-			this.failures.delete(packageName);
+			this.cache.set(key, result.package);
+			this.failures.delete(key);
 			return result.package;
 		}
 
@@ -111,27 +161,33 @@ export class VersionService {
 		} else if (result.error) {
 			Logger.error(`Error fetching ${packageName}: ${result.error}`);
 		}
-		this.failures.set(packageName, {
-			message: result.error ?? "Unknown error",
-			timestamp: Date.now(),
-		});
+		this.rememberFailure(packageName, result.error ?? "Unknown error");
 		return null;
 	}
 
 	/**
-	 * Description/homepage for the hover, from the full registry document.
+	 * Description/homepage for the hover, from the version manifest.
 	 * Cached briefly (including misses) so hover is not a request magnet.
 	 */
 	public async getPackageDetails(
 		packageName: string,
+		version: string,
 	): Promise<PackageDetails | undefined> {
-		const key = this.key(packageName);
+		const base = this.cacheKeyFor(packageName);
+		if (!base || !version) {
+			return undefined;
+		}
+		const key = `${base}|ver:${version}`;
 		const cached = this.details.get(key);
 		if (cached && Date.now() - cached.timestamp < DETAILS_TTL_MS) {
 			return cached.data ?? undefined;
 		}
 
-		const data = await this.client.fetchPackageDetails(packageName);
+		const registry = this.registryFor(packageName);
+		const client = registry ? await this.clientFor(registry) : null;
+		const data = client
+			? await client.fetchPackageDetails(packageName, version)
+			: null;
 		this.details.set(key, { data: data ?? null, timestamp: Date.now() });
 		return data ?? undefined;
 	}
@@ -139,14 +195,61 @@ export class VersionService {
 	public updateConfiguration(
 		ttlMinutes: number,
 		registryUrl?: string,
-		memento?: vscode.Memento,
+		memento?: IMemento,
 		showPrerelease?: boolean,
 	) {
+		// A new cache reloads globalState. Keys include the registry path and
+		// the pre-release flag, so an entry computed for the other mode is
+		// not a hit.
 		this.cache = new PackageCache(ttlMinutes, memento);
-		this.client = new NpmClient(registryUrl);
-		this.registryHost = VersionService.hostOf(registryUrl);
+		if (registryUrl !== undefined) {
+			this.defaultRegistry = normalizeRegistryUrl(registryUrl);
+		}
 		if (showPrerelease !== undefined) {
 			this.showPrerelease = showPrerelease;
 		}
+		this.clients.clear();
+		this.failures.clear();
+		this.details.clear();
+	}
+
+	private cacheKeyFor(packageName: string): string | null {
+		const registry = this.registryFor(packageName);
+		if (!registry) {
+			return null;
+		}
+		return versionCacheKey(registry, packageName, this.showPrerelease);
+	}
+
+	private failureKey(packageName: string): string {
+		return (
+			this.cacheKeyFor(packageName) ??
+			`invalid|${this.showPrerelease ? "1" : "0"}|${packageName}`
+		);
+	}
+
+	private rememberFailure(packageName: string, message: string): void {
+		this.failures.set(this.failureKey(packageName), {
+			message,
+			timestamp: Date.now(),
+		});
+	}
+
+	private async clientFor(registry: string): Promise<NpmClient | null> {
+		const normalized = normalizeRegistryUrl(registry);
+		if (!normalized) {
+			return null;
+		}
+		const stored = this.secrets
+			? await this.secrets.get(tokenSecretKey(normalized))
+			: undefined;
+		const token = stored?.trim() || undefined;
+		const existing = this.clients.get(normalized);
+		if (existing?.hasAuthToken(token)) {
+			return existing;
+		}
+		const client = new NpmClient(normalized, token, this.requestTimeoutMs);
+		this.clients.set(normalized, client);
+		return client;
 	}
 }

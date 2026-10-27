@@ -1,5 +1,5 @@
 import { parseTree } from "jsonc-parser";
-import type { ParsedDependency } from "../types";
+import type { DependencySection, ParsedDependency } from "../types";
 import { registryDependency } from "./dependencySpec";
 
 export class PackageJsonParser {
@@ -12,7 +12,7 @@ export class PackageJsonParser {
 		}
 
 		const processSection = (
-			sectionName: string,
+			sectionName: DependencySection,
 			isDev: boolean,
 			isPeer: boolean = false,
 		) => {
@@ -58,6 +58,7 @@ export class PackageJsonParser {
 
 				dependencies.push({
 					name,
+					section: sectionName,
 					registryName: target.registryName,
 					currentVersion,
 					isDev,

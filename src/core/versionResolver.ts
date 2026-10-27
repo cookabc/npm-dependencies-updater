@@ -70,6 +70,10 @@ export class VersionResolver {
 			if (!range) {
 				return null;
 			}
+			// Floor keeps its prerelease (`^2.0.0-beta.3` → `2.0.0-beta.3`).
+			// `2.0.0` is newer than that floor, so the stable release is an
+			// update even though the caret range already admits it. Coercing
+			// the floor to `2.0.0` would hide the release that just shipped.
 			const min = semver.minVersion(range);
 			if (!min || !semver.gt(latest, min)) {
 				return null;

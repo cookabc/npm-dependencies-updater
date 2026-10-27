@@ -106,7 +106,10 @@ export class NpmCodeLensProvider implements vscode.CodeLensProvider {
 					title: "$(link-external) NPM",
 					tooltip: t("npmDeps"),
 					command: "npmDeps.openOnNpm",
-					arguments: [dep.registryName],
+					arguments: [
+						dep.registryName,
+						this.versionService.registryFor(dep.registryName),
+					],
 				}),
 			);
 		}
@@ -188,6 +191,7 @@ export class NpmCodeLensProvider implements vscode.CodeLensProvider {
 						dep.name,
 						dep.currentVersion,
 						info.latestVersion,
+						dep.section,
 					],
 				};
 			} else if (
@@ -199,7 +203,10 @@ export class NpmCodeLensProvider implements vscode.CodeLensProvider {
 					title: `$(info) ${t("latest")} ${info.latestVersion}`,
 					tooltip: `${t("latest")}: ${info.latestVersion}`,
 					command: "npmDeps.openOnNpm",
-					arguments: [dep.registryName],
+					arguments: [
+						dep.registryName,
+						this.versionService.registryFor(dep.registryName),
+					],
 				};
 			} else {
 				codeLens.command = {

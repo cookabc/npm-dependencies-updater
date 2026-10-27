@@ -51,9 +51,10 @@ export class NpmHoverProvider implements vscode.HoverProvider {
 				: new vscode.Hover(`${t("checking")} ${dep.registryName}...`);
 		}
 
-		// description/homepage only exist in the full registry document
+		// description/homepage come from the version manifest, not the packument
 		const details = await this.versionService.getPackageDetails(
 			dep.registryName,
+			info.latestVersion,
 		);
 		const summary = details?.description ?? info.summary;
 		const homepage = details?.homepage ?? info.homepage;

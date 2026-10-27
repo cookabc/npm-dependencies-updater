@@ -11,11 +11,13 @@ interface CacheEntry {
 	timestamp: number;
 }
 
+export const PACKAGE_CACHE_STORAGE_KEY = "npm-deps-updater-cache";
+
 export class PackageCache {
 	private cache: Map<string, CacheEntry> = new Map();
 	private ttl: number = 60 * 60 * 1000; // 60 minutes default
 	private memento?: IMemento;
-	private readonly STORAGE_KEY = "npm-deps-updater-cache";
+	private readonly STORAGE_KEY = PACKAGE_CACHE_STORAGE_KEY;
 	private saveTimeout: ReturnType<typeof setTimeout> | undefined;
 
 	constructor(ttlMinutes: number = 60, memento?: IMemento) {

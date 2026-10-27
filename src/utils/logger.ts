@@ -1,30 +1,35 @@
-import * as vscode from "vscode";
+import { createRequire } from "node:module";
+
+const nodeRequire = createRequire(__filename);
+
+let channel: { appendLine(line: string): void; show(): void } | undefined;
 
 export class Logger {
-	private static channel: vscode.OutputChannel;
-
 	public static init(name: string) {
-		Logger.channel = vscode.window.createOutputChannel(name);
+		// Loaded on demand so unit tests can import services without the
+		// extension host's `vscode` module.
+		const vscode = nodeRequire("vscode") as typeof import("vscode");
+		channel = vscode.window.createOutputChannel(name);
 	}
 
 	public static log(message: string) {
-		if (!Logger.channel) return;
+		if (!channel) return;
 		const timestamp = new Date().toISOString();
-		Logger.channel.appendLine(`[${timestamp}] [INFO] ${message}`);
+		channel.appendLine(`[${timestamp}] [INFO] ${message}`);
 	}
 
 	public static error(message: string, error?: any) {
-		if (!Logger.channel) return;
+		if (!channel) return;
 		const timestamp = new Date().toISOString();
-		Logger.channel.appendLine(`[${timestamp}] [ERROR] ${message}`);
+		channel.appendLine(`[${timestamp}] [ERROR] ${message}`);
 		if (error) {
-			Logger.channel.appendLine(error.stack || error.message || String(error));
+			channel.appendLine(error.stack || error.message || String(error));
 		}
 	}
 
 	public static show() {
-		if (Logger.channel) {
-			Logger.channel.show();
+		if (channel) {
+			channel.show();
 		}
 	}
 }

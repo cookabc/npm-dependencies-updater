@@ -3,8 +3,16 @@ export interface DependencyOffsets {
 	end: number;
 }
 
+export type DependencySection =
+	| "dependencies"
+	| "devDependencies"
+	| "peerDependencies"
+	| "optionalDependencies";
+
 export interface ParsedDependency {
 	name: string;
+	/** Which package.json object this dependency was read from. */
+	section: DependencySection;
 	/**
 	 * Package to query on the registry. Equals `name` except for `npm:` aliases,
 	 * where it is the aliased package (`npm:lodash@^4.17.0` → `lodash`).
@@ -29,8 +37,8 @@ export interface PackageVersionInfo {
 }
 
 /**
- * Enrichment data only present in the full registry document (the abbreviated
- * corgi response carries neither description nor homepage)
+ * Enrichment from the version manifest. The abbreviated packument carries
+ * neither description nor homepage, and the full packument is much larger.
  */
 export interface PackageDetails {
 	description?: string;
