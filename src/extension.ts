@@ -1,10 +1,21 @@
+import * as os from "node:os";
+import * as path from "node:path";
 import * as vscode from "vscode";
+import { locateDependencyRange } from "./core/locateDependency";
 import { PackageJsonParser } from "./core/packageJsonParser";
+import {
+	loadScopedRegistries,
+	normalizeRegistryUrl,
+	npmrcSearchPaths,
+	packageWebUrl,
+	tokenSecretKey,
+} from "./core/registryConfig";
 import { VersionResolver } from "./core/versionResolver";
 import { NpmCodeLensProvider } from "./providers/codeLensProvider";
 import { NpmHoverProvider } from "./providers/hoverProvider";
 import { VersionService } from "./providers/versionService";
 import {
+	type DependencySection,
 	type PackageVersionInfo,
 	type ParsedDependency,
 	UpdateRisk,
@@ -24,32 +35,39 @@ function locateDependency(
 	parser: PackageJsonParser,
 	packageName: string,
 	currentVersion: string,
+	section?: DependencySection,
+	hint?: vscode.Range,
 ): vscode.Range | undefined {
-	const deps = parser.parse(document.getText());
-	const exact = deps.find(
-		(d) =>
-			d.name === packageName &&
-			document.getText(
-				new vscode.Range(
-					document.positionAt(d.versionRange.start),
-					document.positionAt(d.versionRange.end),
-				),
-			) === `"${currentVersion}"`,
+	const text = document.getText();
+	const found = locateDependencyRange(
+		text,
+		parser.parse(text),
+		packageName,
+		currentVersion,
+		{
+			section,
+			hint: hint
+				? {
+						start: document.offsetAt(hint.start),
+						end: document.offsetAt(hint.end),
+					}
+				: undefined,
+		},
 	);
-	if (exact) {
-		return new vscode.Range(
-			document.positionAt(exact.versionRange.start),
-			document.positionAt(exact.versionRange.end),
-		);
+	if (!found) {
+		return undefined;
 	}
-	const byName = deps.find((d) => d.name === packageName);
-	if (byName) {
-		return new vscode.Range(
-			document.positionAt(byName.versionRange.start),
-			document.positionAt(byName.versionRange.end),
-		);
-	}
-	return undefined;
+	return new vscode.Range(
+		document.positionAt(found.start),
+		document.positionAt(found.end),
+	);
+}
+
+function readScopedRegistries(): Map<string, string> {
+	const roots = (vscode.workspace.workspaceFolders ?? []).map(
+		(folder) => folder.uri.fsPath,
+	);
+	return loadScopedRegistries(npmrcSearchPaths(roots, os.homedir()));
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -71,6 +89,8 @@ export function activate(context: vscode.ExtensionContext) {
 		context.globalState,
 		showPrerelease,
 	);
+	versionService.setSecrets(context.secrets);
+	versionService.setScopedRegistries(readScopedRegistries());
 	const parser = new PackageJsonParser();
 	const statusBar = new StatusBarManager();
 
@@ -103,6 +123,7 @@ export function activate(context: vscode.ExtensionContext) {
 					context.globalState,
 					newShowPrerelease,
 				);
+				versionService.setScopedRegistries(readScopedRegistries());
 				codeLensProvider.setEnabled(newEnabled);
 				hoverProvider.setEnabled(newEnabled);
 				codeLensProvider.refresh();
@@ -131,6 +152,7 @@ export function activate(context: vscode.ExtensionContext) {
 				packageName: string,
 				currentVersion: string,
 				newVersion: string,
+				section?: DependencySection,
 			) => {
 				const formattedVersion = VersionResolver.formatNewVersion(
 					currentVersion,
@@ -168,6 +190,8 @@ export function activate(context: vscode.ExtensionContext) {
 						parser,
 						packageName,
 						currentVersion,
+						section,
+						range,
 					);
 					if (located) {
 						targetRange = located;
@@ -217,12 +241,81 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		vscode.commands.registerCommand(
 			"npmDeps.openOnNpm",
-			(packageName: string) => {
-				vscode.env.openExternal(
-					vscode.Uri.parse(`https://www.npmjs.com/package/${packageName}`),
-				);
+			(packageName: string, registryUrl?: string | null) => {
+				const page = packageWebUrl(registryUrl, packageName);
+				if (!page) {
+					vscode.window.showErrorMessage("Invalid registry URL");
+					return;
+				}
+				vscode.env.openExternal(vscode.Uri.parse(page));
 			},
 		),
+	);
+
+	context.subscriptions.push(
+		vscode.commands.registerCommand("npmDeps.setRegistryToken", async () => {
+			const configured = vscode.workspace.getConfiguration("npmDeps");
+			const picks: { label: string; description?: string; url: string }[] = [];
+			const fallback = normalizeRegistryUrl(
+				configured.get<string>("registryUrl", "https://registry.npmjs.org"),
+			);
+			if (fallback) {
+				picks.push({
+					label: fallback,
+					description: "Default registry",
+					url: fallback,
+				});
+			}
+			for (const [scope, url] of readScopedRegistries()) {
+				picks.push({ label: url, description: scope, url });
+			}
+			picks.push({ label: "Other registry URL…", url: "" });
+			const picked = await vscode.window.showQuickPick(picks, {
+				title: "Registry for the auth token",
+				ignoreFocusOut: true,
+			});
+			if (!picked) {
+				return;
+			}
+			let url = picked.url;
+			if (!url) {
+				const input = await vscode.window.showInputBox({
+					prompt: "Registry URL (http or https)",
+					ignoreFocusOut: true,
+				});
+				if (input === undefined) {
+					return;
+				}
+				const normalized = normalizeRegistryUrl(input);
+				if (!normalized) {
+					vscode.window.showErrorMessage(
+						"Invalid registry URL. Use an http(s) URL.",
+					);
+					return;
+				}
+				url = normalized;
+			}
+			const token = await vscode.window.showInputBox({
+				prompt: `Token for ${url}. Leave empty to remove the saved token.`,
+				password: true,
+				ignoreFocusOut: true,
+			});
+			if (token === undefined) {
+				return;
+			}
+			const key = tokenSecretKey(url);
+			if (token.trim() === "") {
+				await context.secrets.delete(key);
+				vscode.window.showInformationMessage(
+					`Removed the saved token for ${url}`,
+				);
+			} else {
+				await context.secrets.store(key, token.trim());
+				vscode.window.showInformationMessage(`Saved the token for ${url}`);
+			}
+			versionService.invalidateCredentials();
+			codeLensProvider.refresh();
+		}),
 	);
 
 	context.subscriptions.push(
@@ -348,7 +441,7 @@ export function activate(context: vscode.ExtensionContext) {
 			const freshByName = new Map<string, ParsedDependency[]>();
 			if (currentDeps !== dependencies) {
 				for (const d of currentDeps) {
-					const depKey = `${d.name}|${d.currentVersion}`;
+					const depKey = `${d.section}|${d.name}|${d.currentVersion}`;
 					const list = freshByName.get(depKey) ?? [];
 					list.push(d);
 					freshByName.set(depKey, list);
@@ -368,7 +461,9 @@ export function activate(context: vscode.ExtensionContext) {
 
 				let target = dep;
 				if (currentDeps !== dependencies) {
-					const list = freshByName.get(`${dep.name}|${dep.currentVersion}`);
+					const list = freshByName.get(
+						`${dep.section}|${dep.name}|${dep.currentVersion}`,
+					);
 					const located = list?.shift();
 					if (!located) {
 						continue;
@@ -390,6 +485,23 @@ export function activate(context: vscode.ExtensionContext) {
 			codeLensProvider.refresh();
 		}),
 	);
+
+	context.subscriptions.push(
+		vscode.workspace.onDidSaveTextDocument((document) => {
+			if (isNpmrc(document.fileName)) {
+				versionService.setScopedRegistries(readScopedRegistries());
+				codeLensProvider.refresh();
+			}
+		}),
+		vscode.workspace.onDidChangeWorkspaceFolders(() => {
+			versionService.setScopedRegistries(readScopedRegistries());
+			codeLensProvider.refresh();
+		}),
+	);
+}
+
+function isNpmrc(fileName: string): boolean {
+	return path.basename(fileName) === ".npmrc";
 }
 
 export function deactivate() {}

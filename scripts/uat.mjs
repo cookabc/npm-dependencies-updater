@@ -4,8 +4,8 @@
  * src/test/uat/suite.ts (compiled to out/test/uat/suite.js) inside it.
  *
  * The mock serves abbreviated (corgi) metadata for the Accept header the
- * client sends and full documents for the hover-detail fetch, so the
- * description/homepage path is exercised for real.
+ * client sends and a version manifest for the hover-detail fetch, so the
+ * description/homepage path is exercised without a full packument.
  *
  * Usage: npm run uat
  */
@@ -70,7 +70,12 @@ const server = http.createServer((req, res) => {
 		res.end(JSON.stringify({ corgiHits, fullHits, notFoundHits }));
 		return;
 	}
-	const name = decodeURIComponent((req.url ?? "").slice(1));
+	const pathOnly = (req.url ?? "").split("?")[0];
+	const segments = pathOnly.split("/").filter(Boolean);
+	// Scoped names keep the slash encoded (`@scope%2Fpkg`), so the first
+	// segment is the package and the second, when present, is the version.
+	const name = decodeURIComponent(segments[0] ?? "");
+	const version = segments[1] ? decodeURIComponent(segments.slice(1).join("/")) : undefined;
 	const accept = req.headers.accept ?? "";
 	if (!registry[name] || name === "nullpkg") {
 		notFoundHits.push(`${name}(${accept.includes("install-v1") ? "corgi" : "full"})`);
@@ -81,6 +86,22 @@ const server = http.createServer((req, res) => {
 		corgiHits++;
 		res.writeHead(200, { "content-type": "application/json" });
 		res.end(JSON.stringify(registry[name].corgi));
+		return;
+	}
+	// Hover asks for one version manifest, not the whole packument.
+	if (version) {
+		const key = `${name}@${version}`;
+		fullHits[key] = (fullHits[key] ?? 0) + 1;
+		const doc = registry[name].full;
+		res.writeHead(200, { "content-type": "application/json" });
+		res.end(
+			JSON.stringify({
+				name,
+				version,
+				description: doc.description,
+				homepage: doc.homepage,
+			}),
+		);
 		return;
 	}
 	fullHits[name] = (fullHits[name] ?? 0) + 1;
