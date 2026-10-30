@@ -1,120 +1,113 @@
 # NPM Dependencies Updater
 
-Smart version management for `package.json` with one-click updates and breaking change detection.
+**English** · [简体中文](README.zh-CN.md)
+
+Inline version hints and one-click upgrades for `package.json`, with breaking
+change detection and a status bar summary.
 
 [![Marketplace Version](https://vsmarketplacebadges.dev/version/cookabc.npm-dependencies-updater.svg)](https://marketplace.visualstudio.com/items?itemName=cookabc.npm-dependencies-updater)
 [![Downloads](https://vsmarketplacebadges.dev/downloads-short/cookabc.npm-dependencies-updater.svg)](https://marketplace.visualstudio.com/items?itemName=cookabc.npm-dependencies-updater)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![CI](https://github.com/cookabc/npm-dependencies-updater/actions/workflows/ci.yml/badge.svg)](https://github.com/cookabc/npm-dependencies-updater/actions/workflows/ci.yml)
 
-## ✨ Features
+## Features
 
-- 🔍 **Smart Version Detection** - Automatically scans `package.json` files and displays real-time version status.
-- 🎯 **Risk Analysis** - Distinguishes between safe updates (patch/minor) and risky updates (major versions) with clear icons.
-- 🖱️ **One-Click Updates** - Click on CodeLens hints to update your dependencies instantly.
-- ⚠️ **Safety Confirmation** - Intelligent modal dialogs when performing batch updates to handle major version risks.
-- 📊 **Status Bar Integration** - Real-time summary of available updates in your VS Code status bar.
-- 🌍 **Multi-language Support** - Interface localized into 10 languages.
-- 🔒 **peerDependencies Aware** - Peer ranges are shown but excluded from "Update All", since they express host compatibility windows.
-- 🔁 **Resilient Checks** - Failed lookups are cached briefly and retried on demand instead of hammering the registry.
-- 💾 **Smart Caching** - Efficiently caches NPM registry data to ensure a smooth, non-blocking experience.
-- 🔗 **NPM Integration** - Quick links to view package details on npmjs.com.
+- **Version detection** — scanning `package.json` shows each dependency's real status against the registry.
+- **Risk analysis** — patch and minor updates are marked safe; major updates are flagged instead of silently offered.
+- **One-click updates** — CodeLens entries update a single dependency in place.
+- **Batch updates** — the status bar and command palette update every safe package at once, with a confirmation step for majors.
+- **peerDependencies aware** — peer ranges appear but are excluded from "Update All", because they express host compatibility windows rather than pins.
+- **Resilient checks** — failed lookups are negative-cached briefly and retried on demand instead of re-hit on every scroll.
+- **Smart caching** — registry responses are cached, so editing and scrolling stay off the network.
+- **Scoped registries** — private scopes can carry their own registry URL and token.
+- **Precise edits** — updates target the dependency's current position; compound ranges keep their upper bound and only the first alternative of an `OR` range is bumped.
+- **Ten locales** — the interface is localized through `package.nls.*.json`.
 
-## 🚀 Installation
-
-1. Open VS Code
-2. Go to Extensions (Ctrl+Shift+X)
-3. Search for "NPM Dependencies Updater"
-4. Click Install
-
-Or install from command line:
+## Installation
 
 ```bash
 code --install-extension cookabc.npm-dependencies-updater
 ```
 
-## 🚀 Usage
+Or search for "NPM Dependencies Updater" in the Extensions view (Ctrl+Shift+X).
 
-1. Open any `package.json` file.
-2. The extension automatically shows status for each dependency:
-   - `✓ Up to date` - Package is already at the latest version.
-   - `$(sync~spin) Checking...` - Fetching information from NPM.
-   - `$(arrow-up) Update to X.X.X` - Safe update available (click to update).
-   - `$(warning) Update to X.X.X Major` - Major version update (use caution).
-3. Use the Status Bar summary to see an overview of your project's health.
-4. Click "Update All" in the status bar or command palette to batch update safe packages (peerDependencies are skipped).
-5. If a check fails, the CodeLens shows the error — click it to retry.
+## Usage
 
-## ⚙️ Configuration
+1. Open any `package.json`.
+2. Each dependency shows its status:
+   - `✓ Up to date` — already at the latest version.
+   - `$(sync~spin) Checking...` — a registry lookup is in flight.
+   - `$(arrow-up) Update to X.X.X` — a safe update is available.
+   - `$(warning) Update to X.X.X Major` — a major version update.
+3. The status bar summarizes how many packages can move.
+4. Run "Update All" from the status bar or the command palette to upgrade the safe ones (peerDependencies are skipped).
+5. If a lookup fails, the CodeLens shows the error — click it to retry.
 
-| Setting                   | Default                      | Description                  |
-| ------------------------- | ---------------------------- | ---------------------------- |
-| `npmDeps.enabled`         | `true`                       | Enable/disable the extension |
-| `npmDeps.showPrerelease`  | `false`                      | Include pre-release versions when picking the latest |
-| `npmDeps.cacheTTLMinutes` | `60`                         | Cache TTL in minutes         |
-| `npmDeps.registryUrl`     | `https://registry.npmjs.org` | Custom NPM registry URL      |
+## Configuration
 
-## 🏗️ Project Structure
+| Setting | Default | Description |
+| --- | --- | --- |
+| `npmDeps.enabled` | `true` | Enable or disable the extension |
+| `npmDeps.showPrerelease` | `false` | Include pre-release versions when picking the latest |
+| `npmDeps.cacheTTLMinutes` | `60` | Cache TTL in minutes |
+| `npmDeps.registryUrl` | `https://registry.npmjs.org` | Custom registry URL |
+
+## Project structure
 
 ```
 src/
-├── core/           # Core business logic
-│   ├── cache.ts           # Cache management
+├── core/
+│   ├── cache.ts             # Registry response cache
+│   ├── dependencySpec.ts    # Range parsing and bump rules
+│   ├── locateDependency.ts  # Finds a dependency's current position in the document
 │   ├── packageJsonParser.ts # package.json parsing
-│   └── versionResolver.ts # Version risk analysis & resolution
-├── providers/      # Service providers
-│   ├── codeLensProvider.ts # CodeLens provider
-│   ├── npmClient.ts       # NPM API client
-│   └── versionService.ts  # Version service
-├── utils/          # Utility functions
-│   ├── i18n.ts           # Internationalization
-│   ├── logger.ts         # Output channel logging
-│   └── statusBar.ts      # Status bar management
-├── types/          # Type definitions
-│   └── index.ts
-└── extension.ts    # Extension entry point
+│   ├── registryConfig.ts    # Scoped registry URLs and tokens
+│   └── versionResolver.ts   # Version risk analysis and resolution
+├── providers/
+│   ├── codeLensProvider.ts  # CodeLens entries
+│   ├── hoverProvider.ts     # Hover summaries
+│   ├── npmClient.ts         # Registry client
+│   └── versionService.ts    # Version service
+├── utils/
+│   ├── i18n.ts              # Locale lookup
+│   ├── logger.ts            # Output channel logging
+│   └── statusBar.ts         # Status bar management
+├── types/index.ts
+├── test/                    # Mocha unit tests
+└── extension.ts             # Entry point
 ```
 
-## 🛠️ Development
+## Development
 
 ```bash
-# Install dependencies
 npm install
-
-# Compile
-npm run compile
-
-# Run tests
-npm test
+npm run compile   # tsc
+npm test          # mocha 'out/test/unit/**/*.test.js'
+npm run lint      # biome check --write src
+npm run uat       # end-to-end pass against scripts/uat-fixture
 ```
 
-## 🚀 Publishing
+## Publishing
 
-Automated: pushing a version tag runs tests, publishes to both marketplaces
-and attaches the VSIX to a GitHub Release. Publishing uses OIDC trusted
-publishing — register the repository + workflow once on each marketplace
-(no token stored as a secret); `VSCE_PAT` / `OVSX_PAT` secrets still work
-as a fallback:
+Pushing a version tag runs tests, publishes to both marketplaces and attaches
+the VSIX to a GitHub Release:
 
 ```bash
 git tag v<package.json version> && git push origin v<package.json version>
 ```
 
+Publishing uses OIDC trusted publishing — register the repository and workflow
+once on each marketplace, and no token needs to be stored as a secret.
+`VSCE_PAT` / `OVSX_PAT` secrets still work as a fallback.
+
 Manual local publish (reads `.env` with `VSCE_PAT` / `OVSX_PAT`):
 
 ```bash
-# Publish to both VS Code Marketplace and OpenVSX
-./publish.sh all
-
-# Publish to VS Code Marketplace only
-./publish.sh vsx
-
-# Publish to OpenVSX only
-./publish.sh ovsx
+./publish.sh all    # both marketplaces
+./publish.sh vsx    # VS Code Marketplace only
+./publish.sh ovsx   # OpenVSX only
 ```
 
-**Prerequisites:** Azure DevOps Personal Access Token with Marketplace permissions. See [VS Code Publishing Docs](https://code.visualstudio.com/api/working-with-extensions/publishing-extension) for setup details.
+## License
 
-## �📄 License
-
-MIT License. See [LICENSE](LICENSE) for details.
+MIT. See [LICENSE](LICENSE).

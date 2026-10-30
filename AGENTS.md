@@ -6,7 +6,7 @@ This is a **VS Code Extension** that provides smart version management for `pack
 
 - **Extension Name**: NPM Dependencies Updater
 - **Publisher**: cookabc
-- **Version**: 0.2.0
+- **Version**: 0.2.1
 - **License**: MIT
 - **Repository**: https://github.com/cookabc/npm-dependencies-updater
 

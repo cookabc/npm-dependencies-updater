@@ -1,87 +1,110 @@
-# NPM 依赖更新器 (NPM Dependencies Updater)
+# NPM 依赖更新器
 
-针对 `package.json` 的智能版本管理工具，支持一键更新和破坏性变更检测。
+[English](README.md) · **简体中文**
 
-[![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/cookabc.npm-dependencies-updater)](https://marketplace.visualstudio.com/items?itemName=cookabc.npm-dependencies-updater)
-[![Visual Studio Marketplace Downloads](https://img.shields.io/visual-studio-marketplace/d/cookabc.npm-dependencies-updater)](https://marketplace.visualstudio.com/items?itemName=cookabc.npm-dependencies-updater)
+在 `package.json` 里直接显示版本提示并一键升级，同时标出破坏性变更，状态栏给出汇总。
+
+[![Marketplace Version](https://vsmarketplacebadges.dev/version/cookabc.npm-dependencies-updater.svg)](https://marketplace.visualstudio.com/items?itemName=cookabc.npm-dependencies-updater)
+[![Downloads](https://vsmarketplacebadges.dev/downloads-short/cookabc.npm-dependencies-updater.svg)](https://marketplace.visualstudio.com/items?itemName=cookabc.npm-dependencies-updater)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CI](https://github.com/cookabc/npm-dependencies-updater/actions/workflows/ci.yml/badge.svg)](https://github.com/cookabc/npm-dependencies-updater/actions/workflows/ci.yml)
 
-## ✨ 功能特性
+## 功能
 
-- 🔍 **智能版本检测** - 自动扫描 `package.json` 文件并显示实时的版本状态。
-- 🎯 **风险分析** - 通过图标清晰区分安全更新（补丁/次要版本）和风险更新（主要版本）。
-- 🖱️ **一键更新** - 点击 CodeLens 提示即可立即更新依赖。
-- ⚠️ **安全确认** - 在执行批量更新时，通过智能模态对话框处理主要版本风险。
-- 📊 **状态栏集成** - 在 VS Code 状态栏中实时显示可更新包的汇总信息。
-- 🌍 **多语言支持** - 完美支持英文和中文。
-- 💾 **智能缓存** - 高效缓存 NPM 注册表数据，确保流畅、非阻塞的用户体验。
-- 🔗 **NPM 集成** - 提供快速链接，直接在 npmjs.com 上查看包详情。
+- **版本检测** — 扫描 `package.json`，按注册表实际状态显示每个依赖的版本情况。
+- **风险分析** — 补丁与次要版本标为安全，主要版本单独标出，不混在安全更新里默认推荐。
+- **一键更新** — 点 CodeLens 就地更新单个依赖。
+- **批量更新** — 状态栏与命令面板可一次更新全部安全包，遇到主要版本先要确认。
+- **识别 peerDependencies** — 会显示 peer 范围，但排除在「全部更新」之外，因为它表达的是宿主兼容窗口，不是一个锁定值。
+- **可重试的检查失败** — 失败的查询会短暂负缓存，按需重试，不会每次滚动都重新打注册表。
+- **智能缓存** — 注册表响应进缓存，编辑和滚动都不走网络。
+- **作用域注册表** — 私有作用域可以各自配置注册表地址与令牌。
+- **精确改写** — 更新落在依赖当前所在位置；复合范围保留上界，`OR` 范围只升第一个备选。
+- **十种语言** — 界面文案通过 `package.nls.*.json` 本地化。
 
-## 🚀 安装
-
-1. 打开 VS Code
-2. 进入扩展视图 (Ctrl+Shift+X)
-3. 搜索 "NPM Dependencies Updater"
-4. 点击安装
-
-或者通过命令行安装：
+## 安装
 
 ```bash
 code --install-extension cookabc.npm-dependencies-updater
 ```
 
-## 🚀 使用方法
+或在扩展视图（Ctrl+Shift+X）里搜索「NPM Dependencies Updater」。
 
-1. 打开任意 `package.json` 文件。
-2. 扩展将自动显示每个依赖的状态：
-   - `✓ Up to date` - 包已经是最新版本。
-   - `$(sync~spin) Checking...` - 正在从 NPM 获取信息。
-   - `$(arrow-up) Update to X.X.X` - 有安全更新可用（点击更新）。
-   - `$(warning) Update to X.X.X Major` - 主要版本更新（请谨慎操作）。
-3. 使用状态栏汇总查看项目的整体健康状况。
-4. 点击状态栏更新通知或使用命令面板批量更新安全包。
+## 使用
 
-## ⚙️ 配置项
+1. 打开任意 `package.json`。
+2. 每个依赖显示自己的状态：
+   - `✓ Up to date` — 已经是最新版本。
+   - `$(sync~spin) Checking...` — 正在查询注册表。
+   - `$(arrow-up) Update to X.X.X` — 有安全更新可用。
+   - `$(warning) Update to X.X.X Major` — 主要版本更新。
+3. 状态栏汇总有多少包可以升级。
+4. 从状态栏或命令面板执行「Update All」，只升级安全的那些（peerDependencies 跳过）。
+5. 查询失败时 CodeLens 会显示错误，点一下即重试。
 
-| 设置项                    | 默认值                       | 描述                  |
-| ------------------------- | ---------------------------- | --------------------- |
-| `npmDeps.enabled`         | `true`                       | 启用/禁用扩展         |
-| `npmDeps.showPrerelease`  | `false`                      | 是否包含预发布版本    |
-| `npmDeps.cacheTTLMinutes` | `60`                         | 缓存过期时间（分钟）  |
-| `npmDeps.registryUrl`     | `https://registry.npmjs.org` | 自定义 NPM 注册表地址 |
+## 配置项
 
-## 🏗️ 项目结构
+| 设置项 | 默认值 | 说明 |
+| --- | --- | --- |
+| `npmDeps.enabled` | `true` | 启用或禁用扩展 |
+| `npmDeps.showPrerelease` | `false` | 选择最新版本时是否包含预发布版本 |
+| `npmDeps.cacheTTLMinutes` | `60` | 缓存过期时间（分钟） |
+| `npmDeps.registryUrl` | `https://registry.npmjs.org` | 自定义注册表地址 |
+
+## 项目结构
 
 ```
 src/
-├── core/           # 核心业务逻辑
-│   ├── cache.ts           # 缓存管理
+├── core/
+│   ├── cache.ts             # 注册表响应缓存
+│   ├── dependencySpec.ts    # 范围解析与升级规则
+│   ├── locateDependency.ts  # 定位依赖在文档中的当前位置
 │   ├── packageJsonParser.ts # package.json 解析
-│   └── versionResolver.ts # 版本风险分析与解析
-├── providers/      # 服务提供者
-│   ├── codeLensProvider.ts # CodeLens 提供者
-│   ├── npmClient.ts       # NPM API 客户端
-│   └── versionService.ts  # 版本服务
-├── utils/          # 工具函数
-│   └── statusBar.ts      # 状态栏管理
-├── types/          # 类型定义
-│   └── index.ts
-└── extension.ts    # 扩展入口文件
+│   ├── registryConfig.ts    # 作用域注册表地址与令牌
+│   └── versionResolver.ts   # 版本风险分析与解析
+├── providers/
+│   ├── codeLensProvider.ts  # CodeLens 条目
+│   ├── hoverProvider.ts     # 悬停摘要
+│   ├── npmClient.ts         # 注册表客户端
+│   └── versionService.ts    # 版本服务
+├── utils/
+│   ├── i18n.ts              # 语言查找
+│   ├── logger.ts            # 输出通道日志
+│   └── statusBar.ts         # 状态栏管理
+├── types/index.ts
+├── test/                    # Mocha 单元测试
+└── extension.ts             # 扩展入口
 ```
 
-## 🛠️ 开发指南
+## 开发
 
 ```bash
-# 安装依赖
 npm install
-
-# 编译
-npm run compile
-
-# 运行测试
-npm test
+npm run compile   # tsc
+npm test          # mocha 'out/test/unit/**/*.test.js'
+npm run lint      # biome check --write src
+npm run uat       # 针对 scripts/uat-fixture 的端到端验证
 ```
 
-## 📄 许可证
+## 发布
 
-基于 MIT 许可证开源。详见 [LICENSE](LICENSE) 文件。
+推送版本标签后，CI 会跑测试、发布到两个市场，并把 VSIX 附到 GitHub Release：
+
+```bash
+git tag v<package.json 里的版本号> && git push origin v<package.json 里的版本号>
+```
+
+发布使用 OIDC trusted publishing —— 在每个市场登记一次仓库与工作流即可，
+不必把令牌存成 secret。`VSCE_PAT` / `OVSX_PAT` 仍然可用作回退。
+
+本地手动发布（从 `.env` 读取 `VSCE_PAT` / `OVSX_PAT`）：
+
+```bash
+./publish.sh all    # 两个市场都发
+./publish.sh vsx    # 只发 VS Code Marketplace
+./publish.sh ovsx   # 只发 OpenVSX
+```
+
+## 许可
+
+MIT，详见 [LICENSE](LICENSE)。
