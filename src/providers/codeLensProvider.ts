@@ -142,10 +142,10 @@ export class NpmCodeLensProvider implements vscode.CodeLensProvider {
 				}
 			}
 
-			// Also add the NPM link CodeLens immediately as it doesn't need resolution
+			// Also add the npm link CodeLens immediately as it doesn't need resolution
 			lenses.push(
 				new vscode.CodeLens(range, {
-					title: "$(link-external) NPM",
+					title: "$(link-external) npm",
 					tooltip: t("npmDeps"),
 					command: "npmDeps.openOnNpm",
 					arguments: [

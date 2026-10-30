@@ -1,8 +1,8 @@
-# NPM 依赖更新器
+# npm 依赖更新器
 
 [English](README.md) · **简体中文**
 
-在 `package.json` 里直接显示版本提示并一键升级，同时标出破坏性变更，状态栏给出汇总。
+在 `package.json` 里直接显示版本提示并一键升级，状态栏给出汇总，并标出已知漏洞。
 
 [![Marketplace Version](https://vsmarketplacebadges.dev/version/cookabc.npm-dependencies-updater.svg)](https://marketplace.visualstudio.com/items?itemName=cookabc.npm-dependencies-updater)
 [![Downloads](https://vsmarketplacebadges.dev/downloads-short/cookabc.npm-dependencies-updater.svg)](https://marketplace.visualstudio.com/items?itemName=cookabc.npm-dependencies-updater)
@@ -29,7 +29,7 @@
 code --install-extension cookabc.npm-dependencies-updater
 ```
 
-或在扩展视图（Ctrl+Shift+X）里搜索「NPM Dependencies Updater」。
+或在扩展视图（Ctrl+Shift+X）里搜索「npm Dependencies Updater」。
 
 ## 使用
 

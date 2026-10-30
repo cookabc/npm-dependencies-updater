@@ -2,12 +2,12 @@
   "command.updateVersion": "Aggiorna versione dipendenza",
   "command.updateAllVersions": "Aggiorna tutte le dipendenze",
   "command.showUpToDate": "Mostra stato aggiornamento pacchetto",
-  "command.openOnNpm": "Apri su NPM",
+  "command.openOnNpm": "Apri su npm",
   "command.showVulnerabilities": "Mostra vulnerabilità note",
-  "config.title": "Aggiornamento dipendenze NPM",
+  "config.title": "Aggiornamento dipendenze npm",
   "config.enabled.description": "Abilita o disabilita l'estensione",
   "config.showPrerelease.description": "Includi versioni pre-release nei suggerimenti",
-  "config.cacheTTLMinutes.description": "TTL cache per i dati delle versioni NPM (minuti)",
-  "config.registryUrl.description": "URL del registro NPM",
+  "config.cacheTTLMinutes.description": "TTL cache per i dati delle versioni npm (minuti)",
+  "config.registryUrl.description": "URL del registro npm",
   "config.checkVulnerabilities.description": "Verifica le versioni esatte su OSV.dev per vulnerabilità note"
 }

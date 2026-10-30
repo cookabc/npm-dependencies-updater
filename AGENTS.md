@@ -1,10 +1,10 @@
-# NPM Dependencies Updater - Agent Guide
+# npm Dependencies Updater - Agent Guide
 
 ## Project Overview
 
-This is a **VS Code Extension** that provides smart version management for `package.json` files. It displays inline version hints and enables one-click updates with breaking change detection.
+This is a **VS Code Extension** that provides smart version management for `package.json` files. It displays inline version hints, enables one-click updates, and flags known vulnerabilities.
 
-- **Extension Name**: NPM Dependencies Updater
+- **Extension Name**: npm Dependencies Updater
 - **Publisher**: cookabc
 - **Version**: 0.2.1
 - **License**: MIT
@@ -60,12 +60,12 @@ npx vsce package
 ```
 src/
 ├── core/                    # Core business logic
-│   ├── cache.ts             # In-memory cache with TTL for NPM data
+│   ├── cache.ts             # In-memory cache with TTL for npm data
 │   ├── packageJsonParser.ts # package.json parser using jsonc-parser
 │   └── versionResolver.ts   # Version comparison and risk analysis
 ├── providers/               # Service providers
 │   ├── codeLensProvider.ts  # VS Code CodeLens provider (main UI)
-│   ├── npmClient.ts         # NPM Registry API client
+│   ├── npmClient.ts         # npm Registry API client
 │   └── versionService.ts    # Coordinates cache, client, and resolver
 ├── utils/                   # Utility functions
 │   └── statusBar.ts         # Status bar manager

@@ -1,7 +1,7 @@
 {
     "name": "npm-dependencies-updater",
-    "displayName": "NPM Dependencies Updater",
-    "description": "Smart version management for package.json with one-click updates and breaking change detection",
+    "displayName": "npm Dependencies Updater",
+    "description": "Smart version management for package.json with one-click updates and known-vulnerability checks",
     "version": "0.2.1",
     "publisher": "cookabc",
     "license": "MIT",

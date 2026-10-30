@@ -1,9 +1,9 @@
-# NPM Dependencies Updater
+# npm Dependencies Updater
 
 **English** · [简体中文](README.zh-CN.md)
 
-Inline version hints and one-click upgrades for `package.json`, with breaking
-change detection and a status bar summary.
+Inline version hints and one-click upgrades for `package.json`, with a status
+bar summary and known-vulnerability checks.
 
 [![Marketplace Version](https://vsmarketplacebadges.dev/version/cookabc.npm-dependencies-updater.svg)](https://marketplace.visualstudio.com/items?itemName=cookabc.npm-dependencies-updater)
 [![Downloads](https://vsmarketplacebadges.dev/downloads-short/cookabc.npm-dependencies-updater.svg)](https://marketplace.visualstudio.com/items?itemName=cookabc.npm-dependencies-updater)
@@ -30,7 +30,7 @@ change detection and a status bar summary.
 code --install-extension cookabc.npm-dependencies-updater
 ```
 
-Or search for "NPM Dependencies Updater" in the Extensions view (Ctrl+Shift+X).
+Or search for "npm Dependencies Updater" in the Extensions view (Ctrl+Shift+X).
 
 ## Usage
 

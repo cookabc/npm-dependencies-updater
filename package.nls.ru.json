@@ -2,12 +2,12 @@
   "command.updateVersion": "Обновить версию зависимости",
   "command.updateAllVersions": "Обновить все зависимости",
   "command.showUpToDate": "Показать статус обновления пакета",
-  "command.openOnNpm": "Открыть на NPM",
+  "command.openOnNpm": "Открыть на npm",
   "command.showVulnerabilities": "Показать известные уязвимости",
-  "config.title": "Обновление зависимостей NPM",
+  "config.title": "Обновление зависимостей npm",
   "config.enabled.description": "Включить или отключить расширение",
   "config.showPrerelease.description": "Включать пре-релизные версии в подсказки",
-  "config.cacheTTLMinutes.description": "TTL кеша для данных версий NPM (минуты)",
-  "config.registryUrl.description": "URL реестра NPM",
+  "config.cacheTTLMinutes.description": "TTL кеша для данных версий npm (минуты)",
+  "config.registryUrl.description": "URL реестра npm",
   "config.checkVulnerabilities.description": "Проверять точные версии на известные уязвимости через OSV.dev"
 }

@@ -65,7 +65,7 @@ export class StatusBarManager {
 	public reset() {
 		this.statusBarItem.text = `$(package) ${t("npmDeps")}`;
 		this.statusBarItem.backgroundColor = undefined;
-		this.statusBarItem.tooltip = "NPM Dependencies Updater";
+		this.statusBarItem.tooltip = "npm Dependencies Updater";
 	}
 
 	public dispose() {

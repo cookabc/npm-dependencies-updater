@@ -72,7 +72,7 @@ function readScopedRegistries(): Map<string, string> {
 }
 
 export function activate(context: vscode.ExtensionContext) {
-	Logger.init("NPM Dependencies");
+	Logger.init("npm Dependencies");
 	Logger.log(t("npmDeps") + " is now active!");
 
 	const config = vscode.workspace.getConfiguration("npmDeps");
