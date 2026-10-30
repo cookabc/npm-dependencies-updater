@@ -91,6 +91,14 @@
             {
                 "command": "npmDeps.showVulnerabilities",
                 "title": "%command.showVulnerabilities%"
+            },
+            {
+                "command": "npmDeps._uatVulnerabilityLenses",
+                "title": "UAT: read vulnerability lenses"
+            },
+            {
+                "command": "npmDeps._uatScanText",
+                "title": "UAT: scan text for vulnerabilities"
             }
         ],
         "configuration": {

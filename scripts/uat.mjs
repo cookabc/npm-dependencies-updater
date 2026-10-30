@@ -64,6 +64,14 @@ let corgiHits = 0;
 const fullHits = {};
 const notFoundHits = [];
 
+/**
+ * Advisories keyed by the exact pin. `react@17.0.2` is vulnerable,
+ * `leftpad@1.3.0` is not, so the suite can check both directions.
+ */
+const osvAdvisories = {
+	"react@17.0.2": ["GHSA-uat-react-1"],
+};
+
 const server = http.createServer((req, res) => {
 	if ((req.url ?? "") === "/__stats") {
 		res.writeHead(200, { "content-type": "application/json" });
@@ -71,6 +79,33 @@ const server = http.createServer((req, res) => {
 		return;
 	}
 	const pathOnly = (req.url ?? "").split("?")[0];
+
+	// OSV stub: only the pins listed here are vulnerable, so the suite can
+	// assert both that an advisory is reported and that a clean pin is not.
+	if (pathOnly === "/v1/querybatch" && req.method === "POST") {
+		let body = "";
+		req.on("data", (chunk) => {
+			body += chunk;
+		});
+		req.on("end", () => {
+			let queries = [];
+			try {
+				queries = JSON.parse(body).queries ?? [];
+			} catch {
+				res.writeHead(400).end("bad json");
+				return;
+			}
+			const results = queries.map((q) => {
+				const key = `${q.package?.name}@${q.version}`;
+				const ids = osvAdvisories[key];
+				return ids ? { vulns: ids.map((id) => ({ id, modified: "2026-01-01T00:00:00Z" })) } : {};
+			});
+			res.writeHead(200, { "content-type": "application/json" });
+			res.end(JSON.stringify({ results }));
+		});
+		return;
+	}
+
 	const segments = pathOnly.split("/").filter(Boolean);
 	// Scoped names keep the slash encoded (`@scope%2Fpkg`), so the first
 	// segment is the package and the second, when present, is the version.
@@ -123,7 +158,13 @@ try {
 		extensionDevelopmentPath: root,
 		extensionTestsPath: path.join(root, "out", "test", "uat", "suite.js"),
 		launchArgs: [fixture, "--disable-extensions", "--disable-gpu", `--user-data-dir=${profile}`],
-		extensionTestsEnv: { UAT_FIXTURE: fixture, UAT_NPM: `http://127.0.0.1:${port}` },
+		extensionTestsEnv: {
+			UAT_FIXTURE: fixture,
+			UAT_NPM: `http://127.0.0.1:${port}`,
+			// Point the OSV client at this stub so the vulnerability path is
+			// exercised in a real editor without touching the network.
+			NPMDEPS_OSV_BASE: `http://127.0.0.1:${port}`,
+		},
 	});
 	console.log("UAT PASSED");
 } catch (err) {

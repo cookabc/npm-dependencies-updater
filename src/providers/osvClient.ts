@@ -7,9 +7,17 @@
 
 import { Logger } from "../utils/logger";
 
-const OSV_BATCH_URL = "https://api.osv.dev/v1/querybatch";
+const DEFAULT_OSV_BASE = "https://api.osv.dev";
 const TIMEOUT_MS = 10000;
 const MAX_BATCH = 1000;
+
+/**
+ * Base URL for OSV. The UAT suite points this at a local stub so the
+ * vulnerability path runs in a real editor without reaching the network.
+ */
+function osvBase(): string {
+	return (process.env.NPMDEPS_OSV_BASE || DEFAULT_OSV_BASE).replace(/\/+$/, "");
+}
 
 export interface OsvQuery {
 	packageName: string;
@@ -60,7 +68,7 @@ export async function queryVulnerabilities(
 
 		let data: BatchResponse;
 		try {
-			const response = await fetch(OSV_BATCH_URL, {
+			const response = await fetch(`${osvBase()}/v1/querybatch`, {
 				method: "POST",
 				signal: controller.signal,
 				headers: {
@@ -113,7 +121,7 @@ export async function fetchVulnerabilityDetail(
 	const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 	try {
 		const response = await fetch(
-			`https://api.osv.dev/v1/vulns/${encodeURIComponent(id)}`,
+			`${osvBase()}/v1/vulns/${encodeURIComponent(id)}`,
 			{
 				signal: controller.signal,
 				headers: { "User-Agent": "vscode-npm-dependencies-updater" },

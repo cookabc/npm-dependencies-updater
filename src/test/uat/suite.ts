@@ -3,6 +3,7 @@
  * Exercises the extension end-to-end against a local mock npm registry.
  */
 import * as assert from "node:assert";
+import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { PackageJsonParser } from "../../core/packageJsonParser";
@@ -72,8 +73,20 @@ export async function run(): Promise<void> {
 		);
 		return updateLenses.length >= 2;
 	});
-	// 5 dependencies (3 deps + 1 dev + 1 peer) × 2 lenses each
-	assert.strictEqual(lenses.length, 10, `expected 10 lenses`);
+	// 5 dependencies (3 deps + 1 dev + 1 peer) × 2 lenses each, plus whatever
+	// vulnerability shields the OSV stub produced. Count by kind so a new
+	// lens type does not silently change what this assertion means.
+	assert.strictEqual(
+		lenses.filter((l) => l.command?.command === "npmDeps.openOnNpm").length,
+		5,
+		`expected 5 npm link lenses, got: ${JSON.stringify(lenses.map((l) => l.command?.command))}`,
+	);
+	assert.strictEqual(
+		lenses.filter((l) => l.command?.command === "npmDeps.showVulnerabilities")
+			.length,
+		1,
+		"the pinned vulnerable package should carry exactly one shield",
+	);
 
 	// react: 17.0.2 → 17.0.3 (patch, no modal)
 	const reactLens = lenses.find(
@@ -122,7 +135,20 @@ export async function run(): Promise<void> {
 	const firstLine = new vscode.Position(0, 0);
 	const edit = new vscode.WorkspaceEdit();
 	edit.insert(pkgDoc.uri, firstLine, "// a comment line inserted above\n");
+
+	// The edit is applied asynchronously, and applyEdit can resolve before the
+	// buffer reflects it. updateVersion re-locates the dependency by reading
+	// the document, so wait until the inserted line is actually visible.
 	await vscode.workspace.applyEdit(edit);
+	{
+		const deadline = Date.now() + 10000;
+		while (!pkgDoc.getText().startsWith("// a comment line inserted above")) {
+			if (Date.now() > deadline) {
+				assert.fail("the inserted comment never showed up in the document");
+			}
+			await sleep(100);
+		}
+	}
 
 	await vscode.commands.executeCommand(
 		"npmDeps.updateVersion",
@@ -223,6 +249,58 @@ export async function run(): Promise<void> {
 	const service2 = new VersionService(60, NPM, undefined, false);
 	const withoutPre = await service2.getPackageInfo("prerelease-pkg");
 	assert.strictEqual(withoutPre?.latestVersion, "1.9.0");
+
+	// ---------- vulnerability hints (OSV stub) ----------
+	// Read from the fixture as it was on disk, not the edited document: the
+	// update tests above moved react off the pinned version the stub reports.
+	// react@17.0.2 is vulnerable; leftpad@1.3.0 is clean; @scope/thing and
+	// react-dom carry ranges and must never be queried.
+	const pristineText = fs.readFileSync(
+		path.join(FIXTURE, "package.json"),
+		"utf8",
+	);
+	let shieldLenses: import("vscode").CodeLens[] = [];
+	{
+		const deadline = Date.now() + 20000;
+		for (;;) {
+			// One provide pass fills the vulnerability cache for these pins.
+			await vscode.commands.executeCommand(
+				"npmDeps._uatScanText",
+				pristineText,
+			);
+			const direct = (await vscode.commands.executeCommand(
+				"npmDeps._uatVulnerabilityLenses",
+				pristineText,
+			)) as import("vscode").CodeLens[];
+			if (Array.isArray(direct) && direct.length > 0) {
+				shieldLenses = direct;
+				break;
+			}
+			if (Date.now() > deadline) {
+				assert.fail("shield never appeared for the pinned react");
+			}
+			await sleep(400);
+		}
+	}
+
+	assert.strictEqual(
+		shieldLenses.length,
+		1,
+		`exactly the pinned vulnerable package should be flagged, got: ${JSON.stringify(
+			shieldLenses.map((l) => l.command?.arguments?.slice(0, 2)),
+		)}`,
+	);
+	const shield = shieldLenses[0];
+	assert.strictEqual(
+		shield.command?.arguments?.[0],
+		"react",
+		`the flagged package should be react, got: ${shield.command?.arguments?.[0]}`,
+	);
+	assert.deepStrictEqual(
+		shield.command?.arguments?.[2],
+		["GHSA-uat-react-1"],
+		`the shield should carry the advisory, got: ${JSON.stringify(shield.command?.arguments?.[2])}`,
+	);
 
 	console.log("UAT suite finished OK");
 }

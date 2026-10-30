@@ -358,6 +358,22 @@ export function activate(context: vscode.ExtensionContext) {
 	);
 
 	context.subscriptions.push(
+		// Read the vulnerability lenses straight from the provider. The UAT
+		// suite needs this because `executeCodeLensProvider` answers from a
+		// snapshot taken before the scan fires its change event.
+		vscode.commands.registerCommand(
+			"npmDeps._uatVulnerabilityLenses",
+			(text: string) => codeLensProvider.vulnerabilityLensesForText(text),
+		),
+		vscode.commands.registerCommand(
+			"npmDeps._uatScanText",
+			async (text: string) => {
+				await codeLensProvider.scanForText(text);
+			},
+		),
+	);
+
+	context.subscriptions.push(
 		vscode.commands.registerCommand("npmDeps.updateAllVersions", async () => {
 			const editor = vscode.window.activeTextEditor;
 			if (!editor || !editor.document.fileName.endsWith("package.json")) {

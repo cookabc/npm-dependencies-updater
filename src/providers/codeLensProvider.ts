@@ -73,6 +73,52 @@ export class NpmCodeLensProvider implements vscode.CodeLensProvider {
 		this._onDidChangeCodeLenses.fire();
 	}
 
+	/**
+	 * Vulnerability lenses for the dependencies in `text`.
+	 *
+	 * `vscode.executeCodeLensProvider` answers from a snapshot taken before the
+	 * scan fires its change event, so it cannot observe the shield in the same
+	 * run that produced it. The UAT suite reads the provider through this.
+	 */
+	public vulnerabilityLensesForText(text: string): vscode.CodeLens[] {
+		let dependencies: ParsedDependency[];
+		try {
+			dependencies = this.parser.parse(text);
+		} catch {
+			return [];
+		}
+		const result: vscode.CodeLens[] = [];
+		for (const dep of dependencies) {
+			const pinned = pinnedVersion(dep.currentVersion);
+			if (!pinned) {
+				continue;
+			}
+			const ids = this.vulnerabilityCache.get(osvKey(dep.registryName, pinned));
+			if (!ids || ids.length === 0) {
+				continue;
+			}
+			result.push(
+				new vscode.CodeLens(new vscode.Range(0, 0, 0, 0), {
+					title: `$(shield) ${t("vulnerable", ids.length)}`,
+					command: "npmDeps.showVulnerabilities",
+					arguments: [dep.registryName, pinned, ids],
+				}),
+			);
+		}
+		return result;
+	}
+
+	/** Run the vulnerability scan for `text` without needing a real document. */
+	public async scanForText(text: string): Promise<void> {
+		let dependencies: ParsedDependency[];
+		try {
+			dependencies = this.parser.parse(text);
+		} catch {
+			return;
+		}
+		await this.scanVulnerabilitiesAsync(dependencies);
+	}
+
 	public async provideCodeLenses(
 		document: vscode.TextDocument,
 		_token: vscode.CancellationToken,
