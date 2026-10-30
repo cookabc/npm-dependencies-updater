@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { updateLensLabel } from "../core/lensLabel";
 import { PackageJsonParser } from "../core/packageJsonParser";
 import { VersionResolver } from "../core/versionResolver";
 import { type ParsedDependency, UpdateRisk } from "../types";
@@ -167,19 +168,12 @@ export class NpmCodeLensProvider implements vscode.CodeLensProvider {
 					dep.currentVersion,
 					info.latestVersion,
 				);
-				let title = "";
-				let tooltip = `${t("upToDate")}: ${info.latestVersion}`;
-
-				if (risk === UpdateRisk.High) {
-					title = `$(warning) ${t("updateTo")} ${info.latestVersion} ⚠️ ${t("majorUpdate")}`;
-					tooltip += ` (${t("majorUpdate")})`;
-				} else if (risk === UpdateRisk.Medium) {
-					title = `$(info) ${t("updateTo")} ${info.latestVersion} ${t("minorUpdate")}`;
-					tooltip += ` (${t("minorUpdate")})`;
-				} else {
-					title = `$(arrow-circle-up) ${t("updateTo")} ${info.latestVersion}`;
-					tooltip += ` (${t("patchUpdate")})`;
-				}
+				const { title, tooltip } = updateLensLabel(risk, info.latestVersion, {
+					updateTo: t("updateTo"),
+					majorUpdate: t("majorUpdate"),
+					minorUpdate: t("minorUpdate"),
+					patchUpdate: t("patchUpdate"),
+				});
 
 				codeLens.command = {
 					title: title,
