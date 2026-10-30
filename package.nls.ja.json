@@ -3,9 +3,11 @@
   "command.updateAllVersions": "すべての依存関係を更新",
   "command.showUpToDate": "パッケージの最新状態を表示",
   "command.openOnNpm": "NPM で開く",
+  "command.showVulnerabilities": "既知の脆弱性を表示",
   "config.title": "NPM 依存関係アップデーター",
   "config.enabled.description": "拡張機能の有効/無効を切り替え",
   "config.showPrerelease.description": "バージョンヒントにプレリリース版を含める",
   "config.cacheTTLMinutes.description": "NPM バージョンデータのキャッシュ TTL (分)",
-  "config.registryUrl.description": "NPM レジストリ URL"
+  "config.registryUrl.description": "NPM レジストリ URL",
+  "config.checkVulnerabilities.description": "固定バージョンの既知の脆弱性を OSV.dev で確認する"
 }

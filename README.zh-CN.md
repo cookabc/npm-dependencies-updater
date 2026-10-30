@@ -20,6 +20,7 @@
 - **智能缓存** — 注册表响应进缓存，编辑和滚动都不走网络。
 - **作用域注册表** — 私有作用域可以各自配置注册表地址与令牌。
 - **精确改写** — 更新落在依赖当前所在位置；复合范围保留上界，`OR` 范围只升第一个备选。
+- **漏洞检查** — 精确版本会对照 OSV.dev 检查并在原地标出。
 - **十种语言** — 界面文案通过 `package.nls.*.json` 本地化。
 
 ## 安装
@@ -42,6 +43,16 @@ code --install-extension cookabc.npm-dependencies-updater
 4. 从状态栏或命令面板执行「Update All」，只升级安全的那些（peerDependencies 跳过）。
 5. 查询失败时 CodeLens 会显示错误，点一下即重试。
 
+### 漏洞检查
+
+每个精确固定到某个版本的依赖（`1.2.3`）都会对照 [OSV.dev](https://osv.dev)
+检查。存在公告时依赖旁会出现盾牌提示、状态栏变红；点击可列出公告及其严重度，
+选中即可在 osv.dev 上打开。
+
+只检查精确版本。`^1.2.3` 或 `>=3.1` 这类范围约束只说明允许哪些版本，实际装的是
+哪一个由 lockfile 决定，检查范围下限只会报出用户可能根本不会遇到的漏洞。整个
+检查可以用 `npmDeps.checkVulnerabilities` 关掉。
+
 ## 配置项
 
 | 设置项 | 默认值 | 说明 |
@@ -50,6 +61,7 @@ code --install-extension cookabc.npm-dependencies-updater
 | `npmDeps.showPrerelease` | `false` | 选择最新版本时是否包含预发布版本 |
 | `npmDeps.cacheTTLMinutes` | `60` | 缓存过期时间（分钟） |
 | `npmDeps.registryUrl` | `https://registry.npmjs.org` | 自定义注册表地址 |
+| `npmDeps.checkVulnerabilities` | `true` | 是否对照 OSV.dev 检查精确版本 |
 
 ## 项目结构
 
@@ -61,11 +73,13 @@ src/
 │   ├── locateDependency.ts  # 定位依赖在文档中的当前位置
 │   ├── packageJsonParser.ts # package.json 解析
 │   ├── registryConfig.ts    # 作用域注册表地址与令牌
-│   └── versionResolver.ts   # 版本风险分析与解析
+│   ├── versionResolver.ts   # 版本风险分析与解析
+│   └── vulnerabilityScan.ts # 判定哪些精确版本可送 OSV 检查
 ├── providers/
 │   ├── codeLensProvider.ts  # CodeLens 条目
 │   ├── hoverProvider.ts     # 悬停摘要
 │   ├── npmClient.ts         # 注册表客户端
+│   ├── osvClient.ts         # OSV.dev 客户端
 │   └── versionService.ts    # 版本服务
 ├── utils/
 │   ├── i18n.ts              # 语言查找

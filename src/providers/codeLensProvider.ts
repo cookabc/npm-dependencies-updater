@@ -2,10 +2,15 @@ import * as vscode from "vscode";
 import { updateLensLabel } from "../core/lensLabel";
 import { PackageJsonParser } from "../core/packageJsonParser";
 import { VersionResolver } from "../core/versionResolver";
+import {
+	collectVulnerabilityTargets,
+	pinnedVersion,
+} from "../core/vulnerabilityScan";
 import { type ParsedDependency, UpdateRisk } from "../types";
 import { t } from "../utils/i18n";
 import { Logger } from "../utils/logger";
 import type { StatusBarManager } from "../utils/statusBar";
+import { osvKey, queryVulnerabilities } from "./osvClient";
 import type { VersionService } from "./versionService";
 
 /**
@@ -32,20 +37,36 @@ export class NpmCodeLensProvider implements vscode.CodeLensProvider {
 	private statusBar: StatusBarManager;
 	private pendingFetches: Set<string> = new Set();
 	private enabled: boolean;
+	// Vulnerability ids per pinned dependency: "package@version" -> ids
+	private vulnerabilityCache: Map<string, string[]> = new Map();
+	// Pins already sent to OSV, so a failed lookup is not retried on every paint
+	private scannedPins: Set<string> = new Set();
+	private checkVulnerabilities: boolean;
 
 	constructor(
 		versionService: VersionService,
 		statusBar: StatusBarManager,
 		enabled: boolean = true,
+		checkVulnerabilities: boolean = true,
 	) {
 		this.parser = new PackageJsonParser();
 		this.versionService = versionService;
 		this.statusBar = statusBar;
 		this.enabled = enabled;
+		this.checkVulnerabilities = checkVulnerabilities;
 	}
 
 	public setEnabled(enabled: boolean): void {
 		this.enabled = enabled;
+	}
+
+	/** Turning the check off also drops what it found, so no stale shields stay. */
+	public setCheckVulnerabilities(enabled: boolean): void {
+		this.checkVulnerabilities = enabled;
+		if (!enabled) {
+			this.vulnerabilityCache.clear();
+			this.scannedPins.clear();
+		}
 	}
 
 	public refresh(): void {
@@ -101,6 +122,26 @@ export class NpmCodeLensProvider implements vscode.CodeLensProvider {
 			// Create a typed CodeLens with the dependency data
 			lenses.push(new DependencyCodeLens(range, dep, document.uri));
 
+			// Only an exact version names what OSV should be asked about.
+			const pinned = this.checkVulnerabilities
+				? pinnedVersion(dep.currentVersion)
+				: null;
+			if (pinned) {
+				const ids = this.vulnerabilityCache.get(
+					osvKey(dep.registryName, pinned),
+				);
+				if (ids && ids.length > 0) {
+					lenses.push(
+						new vscode.CodeLens(range, {
+							title: `$(shield) ${t("vulnerable", ids.length)}`,
+							tooltip: t("vulnerableTooltip", dep.registryName, pinned),
+							command: "npmDeps.showVulnerabilities",
+							arguments: [dep.registryName, pinned, ids],
+						}),
+					);
+				}
+			}
+
 			// Also add the NPM link CodeLens immediately as it doesn't need resolution
 			lenses.push(
 				new vscode.CodeLens(range, {
@@ -115,16 +156,83 @@ export class NpmCodeLensProvider implements vscode.CodeLensProvider {
 			);
 		}
 
+		if (this.checkVulnerabilities) {
+			this.scanVulnerabilitiesAsync(dependencies);
+		}
+
 		if (!allChecked) {
 			this.statusBar.showChecking();
 		} else {
-			this.statusBar.update(totalUpdates, hasRiskyUpdates);
+			this.statusBar.update(
+				totalUpdates,
+				hasRiskyUpdates,
+				this.countVulnerable(dependencies),
+			);
 		}
 		if (dependencies.length > 0) {
 			this.statusBar.showNow();
 		}
 
 		return lenses;
+	}
+
+	/** Pinned dependencies in this document with at least one advisory. */
+	private countVulnerable(dependencies: ParsedDependency[]): number {
+		let count = 0;
+		for (const dep of dependencies) {
+			const pinned = pinnedVersion(dep.currentVersion);
+			if (!pinned) {
+				continue;
+			}
+			const ids = this.vulnerabilityCache.get(osvKey(dep.registryName, pinned));
+			if (ids && ids.length > 0) {
+				count++;
+			}
+		}
+		return count;
+	}
+
+	/**
+	 * Query OSV for every exact pin in the document, once per pin.
+	 *
+	 * One batched request covers all of them. A pin that was already sent is
+	 * not sent again, so a failed lookup does not repeat on every repaint.
+	 */
+	private async scanVulnerabilitiesAsync(
+		dependencies: ParsedDependency[],
+	): Promise<void> {
+		const pending = collectVulnerabilityTargets(dependencies).filter(
+			(target) => !this.scannedPins.has(target.key),
+		);
+		if (pending.length === 0) {
+			return;
+		}
+		for (const target of pending) {
+			this.scannedPins.add(target.key);
+		}
+
+		try {
+			const found = await queryVulnerabilities(
+				pending.map((target) => ({
+					packageName: target.packageName,
+					version: target.version,
+				})),
+			);
+			let changed = false;
+			for (const [key, ids] of found) {
+				if (!this.vulnerabilityCache.has(key)) {
+					changed = true;
+				}
+				this.vulnerabilityCache.set(key, ids);
+			}
+			if (changed) {
+				this._onDidChangeCodeLenses.fire();
+			}
+		} catch (error) {
+			// The pins stay recorded, so this is reported once rather than
+			// retried on every repaint.
+			Logger.error("Vulnerability scan failed:", error);
+		}
 	}
 
 	public async resolveCodeLens(

@@ -2,6 +2,24 @@
 
 All notable changes to the "npm-dependencies-updater" extension will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- Dependencies pinned to an exact version are checked against OSV.dev. A
+  shield hint marks the ones with known advisories, the status bar turns red,
+  and clicking lists each advisory with its severity. Only exact versions are
+  checked: a range states which versions are allowed, not which one the
+  lockfile installed. Disable with `npmDeps.checkVulnerabilities`.
+
+### Fixed
+
+- The tooltip on an update lens no longer claims the package is up to date.
+  It was initialised from the up-to-date wording and then given a risk suffix,
+  so "Update to 2.0.0" carried the tooltip "Up to date: 2.0.0 (Major Update)".
+  The label is now built by a pure function that describes the update on
+  offer, which also makes the wording testable without a running editor.
+
 ## [0.2.1] - 2026-10-11
 
 ### Fixed

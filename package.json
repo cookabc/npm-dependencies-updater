@@ -87,6 +87,10 @@
             {
                 "command": "npmDeps.setRegistryToken",
                 "title": "Set Registry Auth Token"
+            },
+            {
+                "command": "npmDeps.showVulnerabilities",
+                "title": "%command.showVulnerabilities%"
             }
         ],
         "configuration": {
@@ -111,6 +115,11 @@
                     "type": "string",
                     "default": "https://registry.npmjs.org",
                     "description": "%config.registryUrl.description%"
+                },
+                "npmDeps.checkVulnerabilities": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "%config.checkVulnerabilities.description%"
                 }
             }
         }

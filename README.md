@@ -21,6 +21,7 @@ change detection and a status bar summary.
 - **Smart caching** — registry responses are cached, so editing and scrolling stay off the network.
 - **Scoped registries** — private scopes can carry their own registry URL and token.
 - **Precise edits** — updates target the dependency's current position; compound ranges keep their upper bound and only the first alternative of an `OR` range is bumped.
+- **Vulnerability check** — exact versions are checked against OSV.dev and flagged in place.
 - **Ten locales** — the interface is localized through `package.nls.*.json`.
 
 ## Installation
@@ -43,6 +44,18 @@ Or search for "NPM Dependencies Updater" in the Extensions view (Ctrl+Shift+X).
 4. Run "Update All" from the status bar or the command palette to upgrade the safe ones (peerDependencies are skipped).
 5. If a lookup fails, the CodeLens shows the error — click it to retry.
 
+### Vulnerability check
+
+Every dependency pinned to an exact version (`1.2.3`) is checked against
+[OSV.dev](https://osv.dev). When advisories exist, a shield hint appears next
+to the dependency and the status bar turns red; clicking it lists the
+advisories with their severity and opens the chosen one on osv.dev.
+
+Only exact versions are checked. A range such as `^1.2.3` or `>=3.1` states
+which versions are allowed, not which one is installed — the lockfile decides
+that — so checking the range floor would report advisories the user may never
+run into. Disable the whole check with `npmDeps.checkVulnerabilities`.
+
 ## Configuration
 
 | Setting | Default | Description |
@@ -51,6 +64,7 @@ Or search for "NPM Dependencies Updater" in the Extensions view (Ctrl+Shift+X).
 | `npmDeps.showPrerelease` | `false` | Include pre-release versions when picking the latest |
 | `npmDeps.cacheTTLMinutes` | `60` | Cache TTL in minutes |
 | `npmDeps.registryUrl` | `https://registry.npmjs.org` | Custom registry URL |
+| `npmDeps.checkVulnerabilities` | `true` | Check exact versions against OSV.dev |
 
 ## Project structure
 
@@ -62,11 +76,13 @@ src/
 │   ├── locateDependency.ts  # Finds a dependency's current position in the document
 │   ├── packageJsonParser.ts # package.json parsing
 │   ├── registryConfig.ts    # Scoped registry URLs and tokens
-│   └── versionResolver.ts   # Version risk analysis and resolution
+│   ├── versionResolver.ts   # Version risk analysis and resolution
+│   └── vulnerabilityScan.ts # Which pins can be checked against OSV
 ├── providers/
 │   ├── codeLensProvider.ts  # CodeLens entries
 │   ├── hoverProvider.ts     # Hover summaries
 │   ├── npmClient.ts         # Registry client
+│   ├── osvClient.ts         # OSV.dev client
 │   └── versionService.ts    # Version service
 ├── utils/
 │   ├── i18n.ts              # Locale lookup

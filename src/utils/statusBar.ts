@@ -25,7 +25,26 @@ export class StatusBarManager {
 		this.statusBarItem.show();
 	}
 
-	public update(updateCount: number, hasRiskyUpdates: boolean) {
+	/**
+	 * `vulnerable` counts pinned dependencies with at least one known
+	 * advisory. It takes precedence over the update count: a known
+	 * vulnerability matters more than a version being behind.
+	 */
+	public update(
+		updateCount: number,
+		hasRiskyUpdates: boolean,
+		vulnerable: number = 0,
+	) {
+		if (vulnerable > 0) {
+			this.statusBarItem.text = `$(shield) ${t("vulnerable", vulnerable)}`;
+			this.statusBarItem.tooltip = t("statusBarVulnerable", vulnerable);
+			this.statusBarItem.backgroundColor = new vscode.ThemeColor(
+				"statusBarItem.errorBackground",
+			);
+			this.statusBarItem.show();
+			return;
+		}
+
 		if (updateCount === 0) {
 			this.statusBarItem.text = `$(check) ${t("upToDate")}`;
 			this.statusBarItem.backgroundColor = undefined;

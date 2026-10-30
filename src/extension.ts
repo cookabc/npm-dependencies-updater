@@ -13,6 +13,7 @@ import {
 import { VersionResolver } from "./core/versionResolver";
 import { NpmCodeLensProvider } from "./providers/codeLensProvider";
 import { NpmHoverProvider } from "./providers/hoverProvider";
+import { fetchVulnerabilityDetail } from "./providers/osvClient";
 import { VersionService } from "./providers/versionService";
 import {
 	type DependencySection,
@@ -82,6 +83,10 @@ export function activate(context: vscode.ExtensionContext) {
 	);
 	const enabled = config.get<boolean>("enabled", true);
 	const showPrerelease = config.get<boolean>("showPrerelease", false);
+	const checkVulnerabilities = config.get<boolean>(
+		"checkVulnerabilities",
+		true,
+	);
 
 	const versionService = new VersionService(
 		ttl,
@@ -99,6 +104,7 @@ export function activate(context: vscode.ExtensionContext) {
 		versionService,
 		statusBar,
 		enabled,
+		checkVulnerabilities,
 	);
 	const hoverProvider = new NpmHoverProvider(versionService, enabled);
 
@@ -117,6 +123,10 @@ export function activate(context: vscode.ExtensionContext) {
 					"showPrerelease",
 					false,
 				);
+				const newCheckVulnerabilities = newConfig.get<boolean>(
+					"checkVulnerabilities",
+					true,
+				);
 				versionService.updateConfiguration(
 					newTtl,
 					newRegistryUrl,
@@ -125,6 +135,7 @@ export function activate(context: vscode.ExtensionContext) {
 				);
 				versionService.setScopedRegistries(readScopedRegistries());
 				codeLensProvider.setEnabled(newEnabled);
+				codeLensProvider.setCheckVulnerabilities(newCheckVulnerabilities);
 				hoverProvider.setEnabled(newEnabled);
 				codeLensProvider.refresh();
 			}
@@ -316,6 +327,34 @@ export function activate(context: vscode.ExtensionContext) {
 			versionService.invalidateCredentials();
 			codeLensProvider.refresh();
 		}),
+	);
+
+	context.subscriptions.push(
+		vscode.commands.registerCommand(
+			"npmDeps.showVulnerabilities",
+			async (packageName: string, version: string, ids: string[]) => {
+				const items = await Promise.all(
+					ids.map(async (id) => {
+						const detail = await fetchVulnerabilityDetail(id);
+						return {
+							label: id,
+							description: detail?.severity ?? "",
+							detail: detail?.summary ?? "",
+						};
+					}),
+				);
+
+				const picked = await vscode.window.showQuickPick(items, {
+					title: `${packageName} ${version}: ${ids.length} known ${ids.length === 1 ? "vulnerability" : "vulnerabilities"}`,
+					placeHolder: "Select an advisory to open it on osv.dev",
+				});
+				if (picked) {
+					vscode.env.openExternal(
+						vscode.Uri.parse(`https://osv.dev/vulnerability/${picked.label}`),
+					);
+				}
+			},
+		),
 	);
 
 	context.subscriptions.push(
