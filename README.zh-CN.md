@@ -9,12 +9,14 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![CI](https://github.com/cookabc/npm-dependencies-updater/actions/workflows/ci.yml/badge.svg)](https://github.com/cookabc/npm-dependencies-updater/actions/workflows/ci.yml)
 
+升级策略、锁文件报告和临时副本验证见[使用说明](docs/UPGRADES.zh-CN.md)。
+
 ## 功能
 
 - **版本检测** — 扫描 `package.json`，按注册表实际状态显示每个依赖的版本情况。
-- **风险分析** — 补丁与次要版本标为安全，主要版本单独标出，不混在安全更新里默认推荐。
+- **版本变化提示** — 主版本和 `0.x` 次要版本变化需要确认；版本号分类不保证兼容性。
 - **一键更新** — 点 CodeLens 就地更新单个依赖。
-- **批量更新** — 状态栏与命令面板可一次更新全部安全包，遇到主要版本先要确认。
+- **批量更新** — 状态栏与命令面板可一次更新全部无需高风险确认的包，遇到主版本和 `0.x` 次要版本变化先要确认。
 - **识别 peerDependencies** — 会显示 peer 范围，但排除在「全部更新」之外，因为它表达的是宿主兼容窗口，不是一个锁定值。
 - **可重试的检查失败** — 失败的查询会短暂负缓存，按需重试，不会每次滚动都重新打注册表。
 - **智能缓存** — 注册表响应进缓存，编辑和滚动都不走网络。
@@ -37,10 +39,10 @@ code --install-extension cookabc.npm-dependencies-updater
 2. 每个依赖显示自己的状态：
    - `✓ Up to date` — 已经是最新版本。
    - `$(sync~spin) Checking...` — 正在查询注册表。
-   - `$(arrow-up) Update to X.X.X` — 有安全更新可用。
+   - `$(arrow-up) Update to X.X.X` — 有无需高风险确认的更新可用。
    - `$(warning) Update to X.X.X Major` — 主要版本更新。
 3. 状态栏汇总有多少包可以升级。
-4. 从状态栏或命令面板执行「Update All」，只升级安全的那些（peerDependencies 跳过）。
+4. 从状态栏或命令面板执行「Update All」，只升级无需高风险确认的那些（peerDependencies 跳过）。
 5. 查询失败时 CodeLens 会显示错误，点一下即重试。
 
 ### 漏洞检查

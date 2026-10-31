@@ -6,7 +6,7 @@ This is a **VS Code Extension** that provides smart version management for `pack
 
 - **Extension Name**: npm Dependencies Updater
 - **Publisher**: cookabc
-- **Version**: 0.2.1
+- **Version**: 0.3.0
 - **License**: MIT
 - **Repository**: https://github.com/cookabc/npm-dependencies-updater
 
@@ -104,3 +104,11 @@ out/                         # Compiled JavaScript (gitignored)
 5. `VersionResolver` compares current vs latest and determines risk (major/minor/patch)
 6. CodeLenses are rendered with appropriate icons and labels
 7. Users can trigger updates via CodeLens or Status Bar, which uses `vscode.WorkspaceEdit` to safely update `package.json`
+
+## Deterministic upgrade workflow
+
+Do not add AI/model integrations. Version risk is a heuristic; never call non-major updates safe or imply that tests ran when they did not. See `docs/UPGRADES.md` for supported lockfiles, concrete runtime selection and validation boundaries.
+
+`src/shared/` is authored in the Python extension and vendored into the npm extension. Run `npm run check:shared` when both checkouts are available. Both builds must remain independent; never import runtime code from the sibling checkout.
+
+Validation runs only after explicit action in a trusted workspace, in a temporary copy; it must preserve pre-existing edits and check source/lock snapshots before applying any result. Do not use git reset or stash for validation.

@@ -10,12 +10,14 @@ bar summary and known-vulnerability checks.
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![CI](https://github.com/cookabc/npm-dependencies-updater/actions/workflows/ci.yml/badge.svg)](https://github.com/cookabc/npm-dependencies-updater/actions/workflows/ci.yml)
 
+Upgrade policies, lockfile reports and isolated validation: [guide](docs/UPGRADES.md).
+
 ## Features
 
 - **Version detection** — scanning `package.json` shows each dependency's real status against the registry.
-- **Risk analysis** — patch and minor updates are marked safe; major updates are flagged instead of silently offered.
+- **Version-change review** — major and 0.x minor changes require confirmation; other version changes are heuristics, not proof of compatibility.
 - **One-click updates** — CodeLens entries update a single dependency in place.
-- **Batch updates** — the status bar and command palette update every safe package at once, with a confirmation step for majors.
+- **Batch updates** — review high-risk version changes separately; every destination is checked for known vulnerabilities when enabled.
 - **peerDependencies aware** — peer ranges appear but are excluded from "Update All", because they express host compatibility windows rather than pins.
 - **Resilient checks** — failed lookups are negative-cached briefly and retried on demand instead of re-hit on every scroll.
 - **Smart caching** — registry responses are cached, so editing and scrolling stay off the network.
@@ -38,10 +40,10 @@ Or search for "npm Dependencies Updater" in the Extensions view (Ctrl+Shift+X).
 2. Each dependency shows its status:
    - `✓ Up to date` — already at the latest version.
    - `$(sync~spin) Checking...` — a registry lookup is in flight.
-   - `$(arrow-up) Update to X.X.X` — a safe update is available.
+   - `$(arrow-up) Update to X.X.X` — a version update is available.
    - `$(warning) Update to X.X.X Major` — a major version update.
 3. The status bar summarizes how many packages can move.
-4. Run "Update All" from the status bar or the command palette to upgrade the safe ones (peerDependencies are skipped).
+4. Run "Update All" from the status bar or the command palette to upgrade packages without high-risk version changes (peerDependencies are skipped).
 5. If a lookup fails, the CodeLens shows the error — click it to retry.
 
 ### Vulnerability check

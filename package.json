@@ -2,7 +2,7 @@
     "name": "npm-dependencies-updater",
     "displayName": "npm Dependencies Updater",
     "description": "Smart version management for package.json with one-click updates and known-vulnerability checks",
-    "version": "0.2.1",
+    "version": "0.3.0",
     "publisher": "cookabc",
     "license": "MIT",
     "icon": "icon.png",
@@ -99,6 +99,14 @@
             {
                 "command": "npmDeps._uatScanText",
                 "title": "UAT: scan text for vulnerabilities"
+            },
+            {
+                "command": "npmDeps.dependencyReport",
+                "title": "%command.dependencyReport%"
+            },
+            {
+                "command": "npmDeps.previewAndValidate",
+                "title": "%command.previewAndValidate%"
             }
         ],
         "configuration": {
@@ -128,6 +136,79 @@
                     "type": "boolean",
                     "default": true,
                     "description": "%config.checkVulnerabilities.description%"
+                },
+                "npmDeps.strategy": {
+                    "type": "string",
+                    "enum": [
+                        "latest",
+                        "compatible",
+                        "patch"
+                    ],
+                    "default": "latest",
+                    "description": "%config.strategy.description%"
+                },
+                "npmDeps.minimumReleaseAgeDays": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 3650,
+                    "default": 0,
+                    "description": "%config.minimumReleaseAgeDays.description%"
+                },
+                "npmDeps.ignoredVersions": {
+                    "type": "object",
+                    "default": {},
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "description": "%config.ignoredVersions.description%"
+                },
+                "npmDeps.deferredPackages": {
+                    "type": "object",
+                    "default": {},
+                    "additionalProperties": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "description": "%config.deferredPackages.description%"
+                },
+                "npmDeps.targetNodeVersion": {
+                    "type": "string",
+                    "default": "",
+                    "description": "%config.targetNodeVersion.description%",
+                    "pattern": "^$|^v?[0-9]+\\.[0-9]+\\.[0-9]+$"
+                },
+                "npmDeps.validationCommands": {
+                    "type": "array",
+                    "default": [],
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "executable",
+                            "args"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                            "executable": {
+                                "type": "string",
+                                "minLength": 1
+                            },
+                            "args": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "description": "%config.validationCommands.description%"
+                },
+                "npmDeps.allowInstallScripts": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "%config.allowInstallScripts.description%"
                 }
             }
         }
@@ -149,7 +230,8 @@
         "prepare": "husky",
         "uat": "npm run compile && node esbuild.js && node scripts/uat.mjs",
         "lint:fix": "biome check --write src",
-        "check": "npm run lint && npm test"
+        "check": "npm run check:shared && npm run lint && npm test",
+        "check:shared": "node scripts/sync-shared.mjs"
     },
     "dependencies": {
         "jsonc-parser": "^3.3.1",
