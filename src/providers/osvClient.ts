@@ -94,7 +94,18 @@ export async function queryVulnerabilities(
 			clearTimeout(timeoutId);
 		}
 
-		const results = data.results ?? [];
+		const results = data.results;
+		if (
+			!Array.isArray(results) ||
+			results.length !== chunk.length ||
+			results.some(
+				(result) => !result || typeof result !== "object" || "error" in result,
+			)
+		) {
+			throw new Error(
+				"OSV returned an incomplete response. Retry the vulnerability check.",
+			);
+		}
 		for (let j = 0; j < chunk.length; j++) {
 			const vulns = results[j]?.vulns;
 			if (!vulns || vulns.length === 0) {

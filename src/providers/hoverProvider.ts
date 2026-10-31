@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { PackageJsonParser } from "../core/packageJsonParser";
+import { nodeTarget } from "../core/recommendation";
 import { t } from "../utils/i18n";
 import { Logger } from "../utils/logger";
 import type { VersionService } from "./versionService";
@@ -42,11 +43,21 @@ export class NpmHoverProvider implements vscode.HoverProvider {
 		}
 
 		Logger.log(`Providing hover for ${dep.registryName}`);
-		const info = await this.versionService.getPackageInfo(dep.registryName);
+		const info = await this.versionService.getPackageInfo(
+			dep.registryName,
+			dep.currentVersion,
+			nodeTarget(
+				document.fileName,
+				vscode.workspace
+					.getConfiguration("npmDeps")
+					.get<string>("targetNodeVersion", ""),
+			),
+		);
 		if (!info) {
 			// A fresh failure means a retry is pointless right now; an
 			// uncached package is still being fetched
-			return this.versionService.getFailure(dep.registryName)
+			return this.versionService.getFailure(dep.registryName) ||
+				this.versionService.getCachedPackageInfo(dep.registryName)
 				? undefined
 				: new vscode.Hover(`${t("checking")} ${dep.registryName}...`);
 		}

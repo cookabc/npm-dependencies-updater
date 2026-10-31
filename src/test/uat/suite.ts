@@ -302,5 +302,58 @@ export async function run(): Promise<void> {
 		`the shield should carry the advisory, got: ${JSON.stringify(shield.command?.arguments?.[2])}`,
 	);
 
+	// ---------- a vulnerable destination is blocked by the registered update command ----------
+	const targetDir = path.join(FIXTURE, "destination");
+	fs.mkdirSync(targetDir, { recursive: true });
+	fs.writeFileSync(
+		path.join(targetDir, "package.json"),
+		JSON.stringify({ dependencies: { dangerpkg: "1.0.0" } }),
+	);
+	const targetDoc = await vscode.workspace.openTextDocument(
+		path.join(targetDir, "package.json"),
+	);
+	const targetLenses = await waitForLenses(targetDoc, (ls) =>
+		ls.some((l) => l.command?.command === "npmDeps.updateVersion"),
+	);
+	const targetCommand = targetLenses.find(
+		(l) => l.command?.command === "npmDeps.updateVersion",
+	)?.command;
+	assert.ok(targetCommand?.arguments);
+	await vscode.commands.executeCommand(
+		targetCommand.command,
+		...targetCommand.arguments,
+	);
+	assert.match(targetDoc.getText(), /1\.0\.0/);
+	assert.doesNotMatch(targetDoc.getText(), /1\.1\.0/);
+
+	// ---------- lockfile reports render in a native Markdown document ----------
+	fs.writeFileSync(
+		path.join(FIXTURE, "package-lock.json"),
+		JSON.stringify({
+			lockfileVersion: 3,
+			packages: {
+				"": { dependencies: { react: "17.0.2" } },
+				"node_modules/react": {
+					version: "17.0.2",
+					resolved: "https://registry.npmjs.org/react/-/react-17.0.2.tgz",
+					dependencies: { dangerpkg: "1.1.0" },
+				},
+				"node_modules/dangerpkg": {
+					version: "1.1.0",
+					resolved:
+						"https://registry.npmjs.org/dangerpkg/-/dangerpkg-1.1.0.tgz",
+				},
+			},
+		}),
+	);
+	await vscode.window.showTextDocument(pkgDoc);
+	await vscode.commands.executeCommand("npmDeps.dependencyReport");
+	const report = vscode.window.activeTextEditor?.document.getText() ?? "";
+	assert.match(report, /Dependency report/);
+	assert.match(report, /GHSA-uat-destination/);
+	assert.match(report, /react@17\.0\.2 → dangerpkg@1\.1\.0/);
+	const commands = await vscode.commands.getCommands();
+	assert.ok(commands.includes("npmDeps.previewAndValidate"));
+
 	console.log("UAT suite finished OK");
 }

@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { updateLensLabel } from "../core/lensLabel";
 import { PackageJsonParser } from "../core/packageJsonParser";
+import { nodeTarget } from "../core/recommendation";
 import { VersionResolver } from "../core/versionResolver";
 import {
 	collectVulnerabilityTargets,
@@ -41,6 +42,12 @@ export class NpmCodeLensProvider implements vscode.CodeLensProvider {
 	private vulnerabilityCache: Map<string, string[]> = new Map();
 	// Pins already sent to OSV, so a failed lookup is not retried on every paint
 	private scannedPins: Set<string> = new Set();
+	private scanFailed = false;
+	public retryVulnerabilityScan(): void {
+		this.scanFailed = false;
+		this.scannedPins.clear();
+		this.refresh();
+	}
 	private checkVulnerabilities: boolean;
 
 	constructor(
@@ -64,6 +71,7 @@ export class NpmCodeLensProvider implements vscode.CodeLensProvider {
 	public setCheckVulnerabilities(enabled: boolean): void {
 		this.checkVulnerabilities = enabled;
 		if (!enabled) {
+			this.scanFailed = false;
 			this.vulnerabilityCache.clear();
 			this.scannedPins.clear();
 		}
@@ -145,7 +153,16 @@ export class NpmCodeLensProvider implements vscode.CodeLensProvider {
 			const endPos = document.positionAt(dep.nameRange.end);
 			const range = new vscode.Range(startPos, endPos);
 
-			const info = this.versionService.getCachedPackageInfo(dep.registryName);
+			const info = this.versionService.getCachedPackageInfo(
+				dep.registryName,
+				dep.currentVersion,
+				nodeTarget(
+					document.fileName,
+					vscode.workspace
+						.getConfiguration("npmDeps")
+						.get<string>("targetNodeVersion", ""),
+				),
+			);
 			if (info) {
 				const isUpdateAvailable = VersionResolver.isUpdateAvailable(
 					dep.currentVersion,
@@ -219,6 +236,14 @@ export class NpmCodeLensProvider implements vscode.CodeLensProvider {
 			this.statusBar.showNow();
 		}
 
+		if (this.scanFailed && this.checkVulnerabilities)
+			lenses.push(
+				new vscode.CodeLens(new vscode.Range(0, 0, 0, 0), {
+					title: "$(shield) Vulnerability check failed — retry",
+					command: "npmDeps.retryVulnerabilityScan",
+					tooltip: "Vulnerability status is unknown. Click to retry the check.",
+				}),
+			);
 		return lenses;
 	}
 
@@ -278,6 +303,8 @@ export class NpmCodeLensProvider implements vscode.CodeLensProvider {
 			// The pins stay recorded, so this is reported once rather than
 			// retried on every repaint.
 			Logger.error("Vulnerability scan failed:", error);
+			this.scanFailed = true;
+			this.refresh();
 		}
 	}
 
@@ -291,9 +318,28 @@ export class NpmCodeLensProvider implements vscode.CodeLensProvider {
 
 		const dep = codeLens.dependency;
 		const uri = codeLens.documentUri;
+		const document = { fileName: uri.fsPath };
 
-		const info = this.versionService.getCachedPackageInfo(dep.registryName);
+		const info = this.versionService.getCachedPackageInfo(
+			dep.registryName,
+			dep.currentVersion,
+			nodeTarget(
+				document.fileName,
+				vscode.workspace
+					.getConfiguration("npmDeps")
+					.get<string>("targetNodeVersion", ""),
+			),
+		);
 
+		if (!info && this.versionService.getCachedPackageInfo(dep.registryName)) {
+			codeLens.command = {
+				title: "$(info) No eligible version",
+				command: "",
+				tooltip:
+					"No version meets the selected update policy and target Node version. Review the extension settings.",
+			};
+			return codeLens;
+		}
 		if (!info && this.versionService.getFailure(dep.registryName)) {
 			// A recent fetch failed; show it and let the user retry instead of
 			// spinning (and re-requesting) on every resolve

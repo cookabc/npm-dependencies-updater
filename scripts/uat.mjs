@@ -32,6 +32,7 @@ const corgi = (latest, versions) => ({
 const full = (data) => data;
 
 const registry = {
+ dangerpkg:{corgi:corgi("1.1.0",["1.0.0","1.1.0"]),full:full({name:"dangerpkg"})},
 	react: {
 		corgi: corgi("17.0.3", ["17.0.2", "17.0.3"]),
 		full: full({
@@ -69,6 +70,7 @@ const notFoundHits = [];
  * `leftpad@1.3.0` is not, so the suite can check both directions.
  */
 const osvAdvisories = {
+ "dangerpkg@1.1.0":["GHSA-uat-destination"],
 	"react@17.0.2": ["GHSA-uat-react-1"],
 };
 

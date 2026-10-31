@@ -1,8 +1,10 @@
 import * as os from "node:os";
 import * as path from "node:path";
 import * as vscode from "vscode";
+import { parseNpmAlias } from "./core/dependencySpec";
 import { locateDependencyRange } from "./core/locateDependency";
 import { PackageJsonParser } from "./core/packageJsonParser";
+import { nodeTarget } from "./core/recommendation";
 import {
 	loadScopedRegistries,
 	normalizeRegistryUrl,
@@ -13,8 +15,12 @@ import {
 import { VersionResolver } from "./core/versionResolver";
 import { NpmCodeLensProvider } from "./providers/codeLensProvider";
 import { NpmHoverProvider } from "./providers/hoverProvider";
-import { fetchVulnerabilityDetail } from "./providers/osvClient";
+import { fetchVulnerabilityDetail, osvKey } from "./providers/osvClient";
+import { assertPeerCompatibility } from "./providers/peerGuard";
+import { npmProjectAdapter } from "./providers/projectAdapter";
+import { checkedUpgradeTargets } from "./providers/upgradeGuard";
 import { VersionService } from "./providers/versionService";
+import { registerProjectTools } from "./shared/projectTools";
 import {
 	type DependencySection,
 	type PackageVersionInfo,
@@ -94,6 +100,26 @@ export function activate(context: vscode.ExtensionContext) {
 		context.globalState,
 		showPrerelease,
 	);
+	const configurePolicy = () => {
+		const policy = vscode.workspace.getConfiguration("npmDeps");
+		versionService.setPolicy({
+			strategy: policy.get<"latest" | "compatible" | "patch">(
+				"strategy",
+				"latest",
+			),
+			minimumReleaseAgeDays: policy.get<number>("minimumReleaseAgeDays", 0),
+			ignoredVersions: policy.get<Record<string, string[]>>(
+				"ignoredVersions",
+				{},
+			),
+			deferredPackages: policy.get<Record<string, string>>(
+				"deferredPackages",
+				{},
+			),
+		});
+	};
+	configurePolicy();
+	registerProjectTools(context, npmProjectAdapter(versionService));
 	versionService.setSecrets(context.secrets);
 	versionService.setScopedRegistries(readScopedRegistries());
 	const parser = new PackageJsonParser();
@@ -106,6 +132,11 @@ export function activate(context: vscode.ExtensionContext) {
 		enabled,
 		checkVulnerabilities,
 	);
+	context.subscriptions.push(
+		vscode.commands.registerCommand("npmDeps.retryVulnerabilityScan", () =>
+			codeLensProvider.retryVulnerabilityScan(),
+		),
+	);
 	const hoverProvider = new NpmHoverProvider(versionService, enabled);
 
 	// Listen for configuration changes
@@ -113,6 +144,7 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.workspace.onDidChangeConfiguration((e) => {
 			if (e.affectsConfiguration("npmDeps")) {
 				const newConfig = vscode.workspace.getConfiguration("npmDeps");
+				configurePolicy();
 				const newEnabled = newConfig.get<boolean>("enabled", true);
 				const newTtl = newConfig.get<number>("cacheTTLMinutes", 60);
 				const newRegistryUrl = newConfig.get<string>(
@@ -189,12 +221,34 @@ export function activate(context: vscode.ExtensionContext) {
 					}
 				}
 
+				const registryName = parseNpmAlias(currentVersion)?.name ?? packageName;
+				try {
+					const document = vscode.workspace.textDocuments.find(
+						(d) => d.uri.toString() === uri.toString(),
+					);
+					if (document)
+						await assertPeerCompatibility(
+							document,
+							versionService,
+							new Map([[registryName, newVersion]]),
+						);
+					const accepted = await checkedUpgradeTargets(
+						[{ packageName: registryName, version: newVersion }],
+						vscode.workspace
+							.getConfiguration("npmDeps")
+							.get<boolean>("checkVulnerabilities", true),
+					);
+					if (!accepted.has(osvKey(registryName, newVersion))) return;
+				} catch (error) {
+					void vscode.window.showErrorMessage(
+						`Upgrade checks failed. Review the details and retry. ${String(error)}`,
+					);
+					return;
+				}
 				// The lens may have been rendered before earlier edits; aim the
 				// edit at the dependency's current position, not a stale range
 				let targetRange = range;
-				const document = vscode.workspace.textDocuments.find(
-					(d) => d.uri.toString() === uri.toString(),
-				);
+				const document = await vscode.workspace.openTextDocument(uri);
 				if (document) {
 					const located = locateDependency(
 						document,
@@ -216,7 +270,12 @@ export function activate(context: vscode.ExtensionContext) {
 
 				const edit = new vscode.WorkspaceEdit();
 				edit.replace(uri, targetRange, `"${formattedVersion}"`);
-				await vscode.workspace.applyEdit(edit);
+				if (!(await vscode.workspace.applyEdit(edit))) {
+					void vscode.window.showErrorMessage(
+						"The dependency edit was not applied. Retry after reviewing the file.",
+					);
+					return;
+				}
 
 				// Refresh CodeLens
 				codeLensProvider.refresh();
@@ -388,6 +447,7 @@ export function activate(context: vscode.ExtensionContext) {
 			// updating them would silently narrow what hosts are supported
 			const updatable = dependencies.filter((d) => !d.isPeer);
 
+			let cancelled = false;
 			// 1. Scan for updates (parallel)
 			const updates: {
 				dep: ParsedDependency;
@@ -408,6 +468,13 @@ export function activate(context: vscode.ExtensionContext) {
 							if (token.isCancellationRequested) return null;
 							const info = await versionService.getPackageInfo(
 								dep.registryName,
+								dep.currentVersion,
+								nodeTarget(
+									document.fileName,
+									vscode.workspace
+										.getConfiguration("npmDeps")
+										.get<string>("targetNodeVersion", ""),
+								),
 							);
 							completed++;
 							progress.report({
@@ -417,6 +484,10 @@ export function activate(context: vscode.ExtensionContext) {
 						}),
 					);
 
+					if (token.isCancellationRequested) {
+						cancelled = true;
+						return;
+					}
 					for (const result of results) {
 						if (result.status === "fulfilled" && result.value) {
 							const { dep, info } = result.value;
@@ -438,11 +509,38 @@ export function activate(context: vscode.ExtensionContext) {
 				},
 			);
 
+			if (cancelled) return;
 			if (updates.length === 0) {
 				vscode.window.showInformationMessage(t("allUpToDate"));
 				return;
 			}
 
+			try {
+				const accepted = await checkedUpgradeTargets(
+					updates.map((u) => ({
+						packageName: u.dep.registryName,
+						version: u.info.latestVersion,
+					})),
+					vscode.workspace
+						.getConfiguration("npmDeps")
+						.get<boolean>("checkVulnerabilities", true),
+				);
+				for (let i = updates.length - 1; i >= 0; i--)
+					if (
+						!accepted.has(
+							osvKey(
+								updates[i].dep.registryName,
+								updates[i].info.latestVersion,
+							),
+						)
+					)
+						updates.splice(i, 1);
+			} catch (error) {
+				void vscode.window.showErrorMessage(
+					`Upgrade checks failed. Review the details and retry. ${String(error)}`,
+				);
+				return;
+			}
 			// 2. Classify updates
 			const riskyUpdates = updates.filter((u) => u.risk === UpdateRisk.High);
 			const safeUpdates = updates.filter((u) => u.risk !== UpdateRisk.High);
@@ -478,6 +576,22 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 
 			if (updatesToApply.length === 0) {
+				return;
+			}
+
+			try {
+				await assertPeerCompatibility(
+					document,
+					versionService,
+					new Map(
+						updatesToApply.map((u) => [
+							u.dep.registryName,
+							u.info.latestVersion,
+						]),
+					),
+				);
+			} catch (error) {
+				void vscode.window.showErrorMessage(String(error));
 				return;
 			}
 
@@ -535,7 +649,12 @@ export function activate(context: vscode.ExtensionContext) {
 				applied++;
 			}
 
-			await vscode.workspace.applyEdit(edit);
+			if (!(await vscode.workspace.applyEdit(edit))) {
+				void vscode.window.showErrorMessage(
+					"The dependency edit was not applied. Retry after reviewing the file.",
+				);
+				return;
+			}
 			vscode.window.showInformationMessage(t("updatedCount", applied));
 			codeLensProvider.refresh();
 		}),
