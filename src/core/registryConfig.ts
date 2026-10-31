@@ -82,7 +82,7 @@ export function versionCacheKey(
 	showPrerelease: boolean,
 ): string {
 	const registry = normalizeRegistryUrl(registryUrl) ?? registryUrl;
-	return `${registry}|prerelease=${showPrerelease ? "1" : "0"}|${packageName}`;
+	return `metadata-v2|${registry}|prerelease=${showPrerelease ? "1" : "0"}|${packageName}`;
 }
 
 /**

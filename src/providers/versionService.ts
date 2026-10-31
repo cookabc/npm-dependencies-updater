@@ -1,4 +1,5 @@
 import { type IMemento, PackageCache } from "../core/cache";
+import { recommend } from "../core/recommendation";
 import {
 	DEFAULT_REGISTRY,
 	normalizeRegistryUrl,
@@ -6,6 +7,7 @@ import {
 	tokenSecretKey,
 	versionCacheKey,
 } from "../core/registryConfig";
+import type { UpdatePolicy } from "../shared/updatePolicy";
 import type { PackageDetails, PackageVersionInfo } from "../types";
 import { Logger } from "../utils/logger";
 import { NpmClient } from "./npmClient";
@@ -38,6 +40,10 @@ export interface VersionServiceOptions {
 
 export class VersionService {
 	private cache: PackageCache;
+	private policy: UpdatePolicy = {};
+	public setPolicy(policy: UpdatePolicy): void {
+		this.policy = policy;
+	}
 	private showPrerelease: boolean;
 	private defaultRegistry: string | null;
 	private scopedRegistries: Map<string, string>;
@@ -94,12 +100,23 @@ export class VersionService {
 
 	public getCachedPackageInfo(
 		packageName: string,
+		current?: string,
+		nodeVersion?: string,
 	): PackageVersionInfo | undefined {
 		const key = this.cacheKeyFor(packageName);
 		if (!key) {
 			return undefined;
 		}
-		return this.cache.get(key);
+		const raw = this.cache.get(key);
+		return raw && current
+			? (recommend(
+					raw,
+					current,
+					this.policy,
+					nodeVersion,
+					this.showPrerelease,
+				) ?? undefined)
+			: raw;
 	}
 
 	/** Error message if the package failed to fetch recently, else undefined */
@@ -122,6 +139,8 @@ export class VersionService {
 
 	public async getPackageInfo(
 		packageName: string,
+		current?: string,
+		nodeVersion?: string,
 	): Promise<PackageVersionInfo | null> {
 		const key = this.cacheKeyFor(packageName);
 		if (!key) {
@@ -132,7 +151,15 @@ export class VersionService {
 		const cached = this.cache.get(key);
 		if (cached) {
 			this.failures.delete(key);
-			return cached;
+			return current
+				? recommend(
+						cached,
+						current,
+						this.policy,
+						nodeVersion,
+						this.showPrerelease,
+					)
+				: cached;
 		}
 		if (this.getFailure(packageName)) {
 			return null;
@@ -149,11 +176,20 @@ export class VersionService {
 		const result = await client.fetchPackageInfo(
 			packageName,
 			this.showPrerelease,
+			(this.policy.minimumReleaseAgeDays ?? 0) > 0,
 		);
 		if (result.exists && result.package.latestVersion) {
 			this.cache.set(key, result.package);
 			this.failures.delete(key);
-			return result.package;
+			return current
+				? recommend(
+						result.package,
+						current,
+						this.policy,
+						nodeVersion,
+						this.showPrerelease,
+					)
+				: result.package;
 		}
 
 		if (!result.exists) {
@@ -218,7 +254,7 @@ export class VersionService {
 		if (!registry) {
 			return null;
 		}
-		return versionCacheKey(registry, packageName, this.showPrerelease);
+		return `${versionCacheKey(registry, packageName, this.showPrerelease)}${(this.policy.minimumReleaseAgeDays ?? 0) > 0 ? "|release-times" : ""}`;
 	}
 
 	private failureKey(packageName: string): string {

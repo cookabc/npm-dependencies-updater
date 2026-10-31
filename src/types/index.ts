@@ -32,6 +32,16 @@ export interface ParsedDependency {
 export interface PackageVersionInfo {
 	name: string;
 	latestVersion: string;
+	versions?: Record<
+		string,
+		| {
+				deprecated?: string;
+				engines?: { node?: string };
+				peerDependencies?: Record<string, string>;
+		  }
+		| undefined
+	>;
+	publishedAt?: Record<string, string>;
 	summary?: string;
 	homepage?: string;
 }

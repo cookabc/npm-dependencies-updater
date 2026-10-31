@@ -28,7 +28,11 @@ export class VersionResolver {
 			return UpdateRisk.High;
 		}
 		if (diff === "minor" || diff === "preminor") {
-			return UpdateRisk.Medium;
+			const baseline = riskBaseline(
+				currentVersion,
+				semver.parse(latestVersion),
+			);
+			return baseline?.major === 0 ? UpdateRisk.High : UpdateRisk.Medium;
 		}
 		return UpdateRisk.Low;
 	}

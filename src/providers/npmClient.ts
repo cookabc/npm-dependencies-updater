@@ -9,11 +9,14 @@ import type { NpmClientResult, PackageDetails } from "../types";
 /** Metadata copied off an abbreviated packument version object. */
 export interface RegistryVersionMeta {
 	deprecated?: string;
+	engines?: { node?: string };
+	peerDependencies?: Record<string, string>;
 }
 
 interface Packument {
 	"dist-tags"?: { latest?: string };
 	versions?: Record<string, RegistryVersionMeta | undefined>;
+	time?: Record<string, string>;
 	description?: string;
 	homepage?: string;
 }
@@ -122,13 +125,14 @@ export class NpmClient {
 	public async fetchPackageInfo(
 		packageName: string,
 		includePrerelease = false,
+		includeTimes = false,
 	): Promise<NpmClientResult> {
 		if (!this.registryUrl) {
 			return missing(packageName, "Invalid registry URL");
 		}
 		await this.enqueue();
 		try {
-			return await this.doFetch(packageName, includePrerelease);
+			return await this.doFetch(packageName, includePrerelease, includeTimes);
 		} finally {
 			this.dequeue();
 		}
@@ -179,11 +183,12 @@ export class NpmClient {
 	private async doFetch(
 		packageName: string,
 		includePrerelease: boolean,
+		includeTimes: boolean,
 	): Promise<NpmClientResult> {
 		const url = packumentUrl(this.registryUrl as string, packageName);
 		const result = await this.request(
 			url,
-			"application/vnd.npm.install-v1+json",
+			includeTimes ? "application/json" : "application/vnd.npm.install-v1+json",
 		);
 		if (result.kind === "error") {
 			return missing(packageName, result.error);
@@ -211,6 +216,23 @@ export class NpmClient {
 			package: {
 				name: packageName,
 				latestVersion,
+				versions: result.json.versions
+					? Object.fromEntries(
+							Object.entries(result.json.versions).map(([version, meta]) => [
+								version,
+								meta
+									? {
+											deprecated: meta.deprecated,
+											engines: meta.engines?.node
+												? { node: meta.engines.node }
+												: undefined,
+											peerDependencies: meta.peerDependencies,
+										}
+									: undefined,
+							]),
+						)
+					: undefined,
+				publishedAt: result.json.time,
 				summary: result.json.description,
 				homepage: result.json.homepage,
 			},
